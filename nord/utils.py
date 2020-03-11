@@ -1,28 +1,36 @@
+
 """
-Created on 2018-08-01
+Created on Sat Jul 28 19:25:41 2018
 
 @author: George Kyriakides
          ge.kyriakides@gmail.com
 """
 
 import inspect
-import numpy as np
-from neural_nets import layers
+import logging
 import sys
 import time
-import logging
+from pathlib import Path
+
+import numpy as np
+
+
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
 def get_logger(loggername):
     """Get the requested loader
     """
-
+    logs_path = 'Log_Files'
+    Path(logs_path).mkdir(parents=True, exist_ok=True)
+    loggername = logs_path+'/'+loggername
     logger = logging.getLogger(loggername)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     # create a file handler
     handler = logging.FileHandler(loggername+'.log')
-    handler.setLevel(logging.INFO)
+    handler.setLevel(logging.DEBUG)
 
     # create a logging format
     formatter = logging.Formatter(
@@ -35,8 +43,29 @@ def get_logger(loggername):
     return logger
 
 
-def get_convolution_out_size(in_size, filter_size, padding=0, stride=1):
-    return ((in_size-filter_size+2*padding)/stride)+1
+def get_layer_out_size(in_size, kernel_size, padding=0, dilation=1, stride=1):
+    # print(in_size, kernel_size, padding, dilation, stride)
+    return int(np.floor((in_size+2*padding-dilation*(kernel_size-1)-1)/stride+1))
+
+
+def find_optimum_pool_size(original_size, desired_size):
+    kernel_size = int(np.round(original_size/desired_size))
+    stride = kernel_size
+    padding = 0
+    while(True):
+        out = get_layer_out_size(
+            original_size, kernel_size, padding=padding, stride=stride)
+
+        if out < desired_size:
+            padding += 1
+        elif out > desired_size:
+            kernel_size += 1
+        else:
+            return kernel_size, stride, padding
+
+
+def get_transpose_out_size(in_size, kernel_size, padding=0, dilation=1, stride=1, output_padding=0):
+    return int((in_size-1)*stride - 2*padding + kernel_size + output_padding)
 
 
 def extract_params(object_class, non_empty_only=False):
@@ -85,7 +114,7 @@ def print_all_parameters(layer_type):
     print(all_params)
 
 
-def get_random_value(in_type):
+def get_random_value(in_type=float, lower_bound=0, upper_bound=1):
     """Generate a random value of type int, float or bool.
 
     Parameters
@@ -98,10 +127,21 @@ def get_random_value(in_type):
     value : int, float or bool
         The random value
     """
+    if lower_bound is None:
+        return 0 if upper_bound is None else upper_bound
+    elif upper_bound is None:
+        return 0 if lower_bound is None else lower_bound
+    elif lower_bound == upper_bound:
+        return lower_bound
+    elif lower_bound > upper_bound:
+        tmp = upper_bound
+        upper_bound = lower_bound
+        lower_bound = tmp
+
     if in_type is int:
-        return np.random.randint(64)
+        return np.random.randint(lower_bound, upper_bound)
     elif in_type is float:
-        return np.random.rand()
+        return np.random.uniform(lower_bound, upper_bound)
     elif in_type is bool:
         return np.random.rand() > 0.5
 
@@ -125,6 +165,8 @@ def generate_layer_parameters(layer, mandatory_only=True):
     param_vals : list
         A list with the generated values.
     """
+    from neural_nets import layers
+
     lt = layers.find_layer_type(layer)
     params = extract_params(layer, mandatory_only)
     param_types = []
@@ -139,7 +181,6 @@ def generate_layer_parameters(layer, mandatory_only=True):
 # =============================================================================
 #
 # =============================================================================
-
 TOTAL_BAR_LENGTH = 65.
 term_width = 40
 last_time = time.time()

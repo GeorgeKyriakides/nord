@@ -1,5 +1,6 @@
+
 """
-Created on 2018-08-03
+Created on Sat Jul 28 19:40:27 2018
 
 @author: George Kyriakides
          ge.kyriakides@gmail.com
@@ -63,9 +64,9 @@ linear = {'in_features': int,
           'bias': bool}
 
 
-layer_parameters = {'convolutions': convolutions,
-                    'activations': activations,
-                    'losses': losses,
-                    'pooling': pooling,
-                    'dropout': dropout,
-                    'linear': linear}
+parameters_dict = {'convolutions': convolutions,
+                   'activations': activations,
+                   'losses': losses,
+                   'pooling': pooling,
+                   'dropout': dropout,
+                   'linear': linear}
