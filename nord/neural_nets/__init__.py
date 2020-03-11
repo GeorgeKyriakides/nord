@@ -1,26 +1,23 @@
-
 """
-Created on Sun Aug  5 18:54:54 2018
+Created on 2018-08-05
 
 @author: George Kyriakides
          ge.kyriakides@gmail.com
 """
 
-import neural_nets.layers as layers
-from .data_curators import get_cifar10
-from .data_curators import get_cifar10_distributed
+from .layers import *
+from .local.data_curator import get_cifar10
+from .distributed.data_curator import get_cifar10_distributed
 from .neural_builder import NeuralNet
-from .neural_evaluators import LocalEvaluator
-from .neural_evaluators import DistributedEvaluator
+from .local.neural_evaluator import NeuralEvaluator
+from .distributed.neural_evaluator import DistributedNeuralEvaluator
 from .neural_descriptor import NeuralDescriptor
-import neural_nets.distributed_partial_sampler as distributed_partial_sampler
 
 
 __all__ = ['layers',
            'NeuralNet',
-           'LocalEvaluator',
+           'NeuralEvaluator',
            'NeuralDescriptor',
-           'DistributedEvaluator',
+           'DistributedNeuralEvaluator',
            'get_cifar10',
-           'get_cifar10_distributed',
-           'distributed_partial_sampler']
+           'get_cifar10_distributed']
