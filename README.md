@@ -23,17 +23,3 @@ make the implementation and comparison of neural architecture design methods fai
 along with an MPI implementation such as (https://www.mpich.org/) or (https://www.open-mpi.org/)
 
 - networkx (https://networkx.github.io/)
-
-- pygmo for some of the examples (https://esa.github.io/pagmo2/)
-
-## Examples
-
-descriptor_example.py contains a simple example on how to create a branching convolutional network and evaluate it.
-
-genetic_example.py contains 3 different examples:
-  - a local execution with local evaluation (python genetic_example.py -e 1)
-  - a local execution with distributed model evaluation (python genetic_example.py -e 2)
-  - a distributed population evaluation (python genetic_example.py -e 3)
-  
-  
-  The option --untrained skips the model training (handy for quick evaluation of correct execution)
