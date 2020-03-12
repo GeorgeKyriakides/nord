@@ -22,6 +22,8 @@ make the implementation and comparison of neural architecture design methods fai
 - mpi4py (https://github.com/mpi4py/mpi4py), 
 along with an MPI implementation such as (https://www.mpich.org/) or (https://www.open-mpi.org/)
 
+- networkx (https://networkx.github.io/)
+
 - pygmo for some of the examples (https://esa.github.io/pagmo2/)
 
 ## Examples
