@@ -1,11 +1,11 @@
 matplotlib==3.3.2
+mpi4py==3.0.3
 -e git+https://github.com/google-research/nasbench@b94247037ee470418a3e56dcb83814e9be83f3a8#egg=nasbench
 networkx==2.5
 numpy==1.18.5
 scikit-learn==0.23.2
 scipy==1.5.2
-tensorflow-gpu==1.15.0
+tensorflow-gpu==1.15.4
 torch==1.6.0
 torchvision==0.7.0
 tqdm==4.50.0
-

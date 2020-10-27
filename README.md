@@ -1,11 +1,13 @@
 # nord
-Deep neural architecture research framework
+Neural Architecture Search Framework
 
 
-NORD is a deep neural architecture research framework that aims to provide tools in order to 
+NORD is a NAS research framework that aims to provide tools in order to 
 make the implementation and comparison of neural architecture design methods fair and straightforward.
 
 ## Main concepts
+
+- Design Algorithms: Designing neural network specifications
 
 - Descriptors: Making the programmatical generation of nodes and connections more straigth-forward.
 
@@ -17,21 +19,16 @@ make the implementation and comparison of neural architecture design methods fai
 
 - PyTorch and Torchvision (https://pytorch.org/)
 
-- Horovod (https://github.com/uber/horovod)
+- NetworkX
 
-- mpi4py (https://github.com/mpi4py/mpi4py), 
-along with an MPI implementation such as (https://www.mpich.org/) or (https://www.open-mpi.org/)
+- Tensorflow 1.15 for the NASBench-101 benchmark dataset
 
-- pygmo for some of the examples (https://esa.github.io/pagmo2/)
 
 ## Examples
 
-descriptor_example.py contains a simple example on how to create a branching convolutional network and evaluate it.
+- descriptor_example.py Example, usage of NeuralDescriptor and NeuralNet classes
+- local_evaluator_example.py, Example usage of LocalEvaluator, which evaluates the given architecture on various datasets.
+- nasbench_evaluator_example.py, Example usage of BenchmarkEvaluator,which evaluates the given architecture in NASBench-101.
+- reproducible_genetic_algorithm_example_cifar10.py, Example of a reproducible simple genetic algorithm based on DeepNEAT.
+- custom_dataset_example.py, Example of evaluating on a custom dataset
 
-genetic_example.py contains 3 different examples:
-  - a local execution with local evaluation (python genetic_example.py -e 1)
-  - a local execution with distributed model evaluation (python genetic_example.py -e 2)
-  - a distributed population evaluation (python genetic_example.py -e 3)
-  
-  
-  The option --untrained skips the model training (handy for quick evaluation of correct execution)
