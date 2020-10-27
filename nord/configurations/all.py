@@ -26,9 +26,9 @@ class Configs:
                           'activity_recognition': losses.My_CrossEntropyLoss,
                           'fashion-mnist': nn.CrossEntropyLoss}
 
-        self.METRIC = {'cifar10':  (metrics.accuracy),
-                       'activity_recognition': (metrics.one_hot_accuracy),
-                       'fashion-mnist':  (metrics.accuracy)}
+        self.METRIC = {'cifar10':  [metrics.accuracy],
+                       'activity_recognition': [metrics.one_hot_accuracy],
+                       'fashion-mnist':  [metrics.accuracy]}
 
         # Forces hidden layer outputs to certain dimensions
         self.DIMENSION_KEEPING = {'cifar10': 32,
@@ -63,11 +63,11 @@ class Configs:
     def add_classification_dataset(self, name: str, num_classes: int,
                                    input_shape: tuple, channels: int, data_load):
         self.add_dataset(name, num_classes, input_shape, channels,
-                         nn.CrossEntropyLoss, (metrics.accuracy, ), None, data_load, get_dense_batch_net(
+                         nn.CrossEntropyLoss, [metrics.accuracy], None, data_load, get_dense_batch_net(
                              3, self.NUM_CLASSES['cifar10'], nn.LogSoftmax(dim=1)))
 
     def add_regression_dataset(self, name: str, num_classes: int,
                                input_shape: tuple, channels: int, data_load):
         self.add_dataset(name, num_classes, input_shape, channels,
-                         nn.CrossEntropyLoss, (metrics.accuracy, ), None, data_load, get_dense_batch_net(
+                         nn.CrossEntropyLoss, [metrics.accuracy], None, data_load, get_dense_batch_net(
                              3, self.NUM_CLASSES['cifar10'], nn.LogSoftmax(dim=1)))
