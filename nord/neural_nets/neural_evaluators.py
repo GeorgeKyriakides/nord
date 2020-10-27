@@ -102,7 +102,10 @@ class AbstractNeuralEvaluator():
 
         device = self.set_device()
 
-        print(MPI.COMM_WORLD.rank, 'Train Device: ', device)
+        try:
+            print(MPI.COMM_WORLD.rank, 'Train Device: ', device)
+        except Exception:
+            print('Train Device: ', device)
 
         net.to(device)
         net.train()
@@ -160,7 +163,10 @@ class AbstractNeuralEvaluator():
         """
         device = self.set_device()
 
-        print(MPI.COMM_WORLD.rank, 'Test Device: ', device)
+        try:
+            print(MPI.COMM_WORLD.rank, 'Test Device: ', device)
+        except Exception:
+            print('Test Device: ', device)
 
         net.to(device)
         net.eval()
