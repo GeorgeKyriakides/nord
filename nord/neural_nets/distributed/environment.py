@@ -4,12 +4,17 @@ Created on 2018-08-04
 @author: George Kyriakides
          ge.kyriakides@gmail.com
 """
-import horovod.torch as hvd
-from mpi4py import MPI
-from utils import get_logger
-from neural_nets.neural_evaluators import DistributedEvaluator
-import neural_nets.distributed.defaults as defaults
 import warnings
+
+import horovod.torch as hvd
+import neural_nets.distributed.defaults as defaults
+from neural_nets.neural_evaluators import DistributedEvaluator
+from utils import get_logger
+
+try:
+    from mpi4py import MPI
+except Exception:
+    warnings.warn('mpi4py not found')
 
 
 class Environment():

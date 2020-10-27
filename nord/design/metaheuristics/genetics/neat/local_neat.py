@@ -9,8 +9,11 @@ Created on 2018-09-02
 
 import numpy as np
 from design.problem_definitions import ConvNetSizeProblem
-from mpi4py import MPI
 from utils import get_logger
+try:
+    from mpi4py import MPI
+except Exception:
+    warnings.warn('mpi4py not found')
 
 
 class DistributedGenetic():
