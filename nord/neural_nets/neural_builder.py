@@ -13,7 +13,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from dgl.nn.pytorch import AvgPooling
+from nord.configurations.dense_parts import get_dense_net
 from nord.utils import get_layer_out_size, get_transpose_out_size
 from torch import Tensor
 from torch.nn.modules.conv import _ConvNd, _ConvTransposeMixin
@@ -117,6 +117,9 @@ class NeuralNet(nn.Module):
         self.flatten = Flatten()
 
         in_sz = self.__get_flat_out_size_dynamic()
+        
+        if dense_part is None:
+            dense_part = get_dense_net(1, num_classes, nn.Identity())
 
         fc_layers = dense_part(in_sz)
 
