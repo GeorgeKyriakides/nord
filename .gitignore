@@ -1,0 +1,12 @@
+__pycache__
+
+.spyproject
+
+.vscode
+
+*.log
+
+*/data/*
+
+*/Log_Files/*
+

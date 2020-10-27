@@ -1,10 +1,10 @@
 """
-Created on 2018-08-06
+Created on 2018-08-04
 
 @author: George Kyriakides
          ge.kyriakides@gmail.com
 """
 from .environment import Environment
-from .neural_evaluator import DistributedNeuralEvaluator
+import neural_nets.distributed.defaults as defaults
 
-__all__ = ['Environment', 'DistributedNeuralEvaluator']
+__all__ = ['Environment', 'defaults']

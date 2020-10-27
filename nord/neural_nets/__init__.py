@@ -1,23 +1,25 @@
+
 """
-Created on 2018-08-05
+Created on Sun Aug  5 18:54:54 2018
 
 @author: George Kyriakides
          ge.kyriakides@gmail.com
 """
 
-from .layers import *
-from .local.data_curator import get_cifar10
-from .distributed.data_curator import get_cifar10_distributed
-from .neural_builder import NeuralNet
-from .local.neural_evaluator import NeuralEvaluator
-from .distributed.neural_evaluator import DistributedNeuralEvaluator
-from .neural_descriptor import NeuralDescriptor
 
+from . import layers
+from .benchmark_evaluators import BenchmarkEvaluator
+from .neural_builder import NeuralNet
+from .neural_descriptor import NeuralDescriptor
+from .neural_evaluators import (DistributedEvaluator, LocalBatchEvaluator,
+                                LocalEvaluator)
 
 __all__ = ['layers',
            'NeuralNet',
-           'NeuralEvaluator',
+           'LocalEvaluator',
+           'LocalBatchEvaluator',
            'NeuralDescriptor',
-           'DistributedNeuralEvaluator',
-           'get_cifar10',
-           'get_cifar10_distributed']
+           'DistributedEvaluator',
+           'data_curators',
+           'BenchmarkEvaluator',
+           ]
