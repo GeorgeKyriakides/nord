@@ -21,7 +21,7 @@ make the implementation and comparison of neural architecture design methods fai
 
 - NetworkX
 
--Tensorflow 1.15 for the NASBench-101 benchmark dataset
+- Tensorflow 1.15 for the NASBench-101 benchmark dataset
 
 
 ## Examples
