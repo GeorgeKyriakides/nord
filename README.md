@@ -1,8 +1,8 @@
 # nord
-Deep neural architecture research framework
+Neural Architecture Search Framework
 
 
-NORD is a deep neural architecture research framework that aims to provide tools in order to 
+NORD is a NAS research framework that aims to provide tools in order to 
 make the implementation and comparison of neural architecture design methods fair and straightforward.
 
 ## Main concepts
