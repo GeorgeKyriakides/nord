@@ -278,7 +278,7 @@ class AbstractNeuralEvaluator():
             metrics = {}
             for metric in self.conf.METRIC[self.dataset]:
                 metrics.update(
-                    metric(torch.Tensor([[1, 0], ]), torch.Tensor([[0, 1], ]))
+                    metric(torch.Tensor([[1], [0]]), torch.Tensor([[-1], [2]]))
                 )
             return 0, metrics, 0
 

@@ -77,7 +77,7 @@ class Genome(object):
             self.connections.add_gene(new_end)
             self.nodes.add_gene(new_node)
 
-        elif r < self.add_node_rate + self.add_connection_rate:
+        elif r <= self.add_node_rate + self.add_connection_rate:
             nodes = list(self.nodes.genes)
             nodes.remove(INPUT)
             nodes.remove(OUTPUT)
@@ -90,8 +90,8 @@ class Genome(object):
                 self.innovation.assign_number(new_node)
                 self.connections.add_gene(new_node)
 
-            self.connections.mutate(self.mutation_rate)
-            self.nodes.mutate(self.mutation_rate)
+        self.connections.mutate(self.mutation_rate)
+        self.nodes.mutate(self.mutation_rate)
 
     def crossover(self, other):
         new = copy.deepcopy(self)

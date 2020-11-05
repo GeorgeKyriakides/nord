@@ -21,13 +21,12 @@ from nord.utils import assure_reproducibility
 assure_reproducibility()
 
 # Genetic Algorithm Parameters
-add_node_rate = 0.03
-add_connection_rate = 0.05
+add_node_rate = 1.0
+add_connection_rate = 0.0
 mutation_rate = 0.5
-crossover_rate = 0.75
-generations = 10
-population_sz = 5
-tournament_sz = 2
+generations = 3
+population_sz = 2
+tournament_sz = 1
 
 # Evaluation parameters
 EPOCHS = 1
@@ -45,8 +44,8 @@ write_to_file('Generation_No, Individual_No, Fitness, Genome')
 
 # no_filters, dropout_rate, weight_scaling, kernel_size, max_pooling
 layer_bound_types = [int, float, float, int, bool]
-layer_bounds = [[32, 0.0, 0, 1, 0],
-                [256, 0.7, 2.0, 3, 1]]
+layer_bounds = [[8, 0.0, 0, 1, 0],
+                [16, 0.7, 2.0, 3, 1]]
 
 evaluator = LocalEvaluator(torch.optim.Adam, {}, False)
 cache = dict()
@@ -59,6 +58,7 @@ for _ in range(population_sz):
                layer_bounds,
                add_node_rate, add_connection_rate,
                mutation_rate, i)
+    g.mutate()
     population.append(g)
 
 
@@ -76,14 +76,15 @@ for r in range(generations):
                 d = g.to_descriptor(dimensions=2)
                 loss, fitness, total_time = evaluator.descriptor_evaluate(
                     d, EPOCHS, data_percentage=1, dataset=dataset)
-                fitness = fitness['accuracy']
+                if type(fitness) is dict:
+                    fitness = fitness['accuracy']
                 cache[g] = fitness
             else:
                 fitness = cache[g]
 
             g.connections.fitness = fitness
             g.nodes.fitness = fitness
-            write_to_file(str((r, j, fitness, g)))
+            write_to_file(str((r, j, np.round(fitness, 3), g)))
             if fitness == 0:
                 print(g.__repr__())
         except Exception:
@@ -93,7 +94,7 @@ for r in range(generations):
 
     new_population = []
     # Offspring Generation
-    for _ in range(population_sz//2):
+    for _ in range(population_sz):
 
         pool_1 = np.random.choice(
             population, size=tournament_sz, replace=False)
@@ -107,9 +108,8 @@ for r in range(generations):
         parent_2 = pool_2[parent_2]
 
         offspring_1 = parent_1.crossover(parent_2)
-        offspring_2 = parent_2.crossover(parent_1)
+        offspring_1.mutate()
 
         new_population.append(offspring_1)
-        new_population.append(offspring_2)
 
     population = new_population

@@ -31,7 +31,7 @@ class Configs:
                        'fashion-mnist':  [metrics.accuracy]}
 
         # Forces hidden layer outputs to certain dimensions
-        self.DIMENSION_KEEPING = {'cifar10': 32,
+        self.DIMENSION_KEEPING = {'cifar10': None,
                                   'fashion-mnist': None,
                                   'activity_recognition': None}
 

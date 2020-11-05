@@ -9,6 +9,7 @@ Created on Sat Jul 28 19:25:41 2018
 import csv
 import inspect
 import logging
+import random
 import sys
 import time
 from pathlib import Path
@@ -49,10 +50,11 @@ def assure_reproducibility(seed=0):
         enable deterministic cuda execution
     """
 
-    torch.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    random.seed(seed)
     np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.set_deterministic(True)
+    torch.backends.cudnn.benchmark = False
 
 
 def plot_descriptor(descriptor):
