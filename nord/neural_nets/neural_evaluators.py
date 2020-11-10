@@ -137,7 +137,7 @@ class AbstractNeuralEvaluator():
                 optimizer.zero_grad()
                 # forward + backward + optimize
                 outputs = net(inputs)
-                outputs, labels = outputs, labels
+
                 loss = criterion(outputs, labels)
                 loss.backward()
                 optimizer.step()
