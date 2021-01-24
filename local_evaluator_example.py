@@ -34,8 +34,10 @@ conf = Configs()
 
 # Define layer presets
 conv = nn.Conv1d
-# Note that first layer has number of channels
-# equal with the dataset
+# Note that the first layer has number of channels
+# equal to the dataset
+# This can be avoided if we define an nn.Identity as the
+# first layer, before the first Conv1d layer
 conv_params = {'in_channels': conf.CHANNELS[dataset],
                'out_channels': 5, 'kernel_size': 3}
 
