@@ -32,3 +32,5 @@ make the implementation and comparison of neural architecture design methods fai
 - reproducible_genetic_algorithm_example_cifar10.py, Example of a reproducible simple genetic algorithm based on DeepNEAT.
 - custom_dataset_example.py, Example of evaluating on a custom dataset
 
+## Relevant Publications
+https://doi.org/10.1016/j.simpa.2020.100042
