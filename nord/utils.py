@@ -221,14 +221,14 @@ def get_genomes_from_logger(loggername):
             rows.append(row_data)
     return rows
 
+#  TODO: Delete
+# def get_layer_out_size(in_size, kernel_size, padding=0, dilation=1, stride=1):
+#     # print(in_size, kernel_size, padding, dilation, stride)
+#     return int(np.floor((in_size+2*padding-dilation*(kernel_size-1)-1)/stride+1))
 
-def get_layer_out_size(in_size, kernel_size, padding=0, dilation=1, stride=1):
-    # print(in_size, kernel_size, padding, dilation, stride)
-    return int(np.floor((in_size+2*padding-dilation*(kernel_size-1)-1)/stride+1))
-
-
-def get_transpose_out_size(in_size, kernel_size, padding=0, dilation=1, stride=1, output_padding=0):
-    return int((in_size-1)*stride - 2*padding + kernel_size + output_padding)
+# TODO: Delete
+# def get_transpose_out_size(in_size, kernel_size, padding=0, dilation=1, stride=1, output_padding=0):
+#     return int((in_size-1)*stride - 2*padding + kernel_size + output_padding)
 
 
 def extract_params(object_class, non_empty_only=False):

@@ -31,7 +31,8 @@ tournament_sz = 1
 # Evaluation parameters
 EPOCHS = 1
 dataset = 'cifar10'  # can also be 'fashion-mnist'
-output_file = '../results/genetic_cifar10.out'
+# output_file = '../results/genetic_cifar10.out'
+output_file = 'genetic_cifar10.out'
 
 
 def write_to_file(msg):

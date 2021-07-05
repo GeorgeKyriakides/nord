@@ -6,7 +6,7 @@ Created on Sat Aug  4 18:24:35 2018
          ge.kyriakides@gmail.com
 """
 import copy
-from typing import Dict, List, Tuple, Type
+from typing import Dict, List, Tuple
 
 import networkx as nx
 import numpy as np
@@ -14,375 +14,24 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from nord.configurations.dense_parts import get_dense_net
-from nord.utils import get_layer_out_size, get_transpose_out_size
 from torch import Tensor
-from torch.nn.modules.conv import _ConvNd, _ConvTransposeMixin
-from torch.nn.modules.pooling import _AvgPoolNd, _MaxPoolNd
 
-from .layers import Conv2d151, Flatten, Identity, SizeScaleLayer, types_dict
+from .layers import Flatten, SizeScaleLayer, types_dict
 from .neural_descriptor import NeuralDescriptor
 
 MIN_MAX_DIMENSIONS = 'MIN'
 
 
-class NeuralNet(nn.Module):
-    """Basic class, implementing a deep neural net.
-    """
-
-    def __init__(self, net_descriptor: NeuralDescriptor, num_classes: int,
-                 input_shape: Tuple,
-                 input_channels: int, sort: bool = False,
-                 untrained: bool = False,
-                 keep_dimensions: int = None,
-                 dense_part=None):
-        """Generates the pytorch graph of the network.
-
-        Parameters
-        ----------
-        net_descriptor : NeuralDescriptor
-            A descriptor of the netowrk's structure.
-            (see :class:`~.neural_descriptor.NeuralDescriptor`)
-
-        num_classes : int
-            The number of classes (output layer neurons) of the network.
-
-        input_shape : tuple
-            Shape of inputs.
-
-        input_channels : int
-            Number of input channels.
-
-        sort : bool
-            If set to True, the depth of each layer will be
-            added before its name.
-
-        keep_dimensions: int
-            This parameter dicatates the rescaling of layer outputs.
-            The outputs are rescaled to 'keep_dimensions' size.
-            If None, the network will not rescale the outputs at all.
-
-        """
+class _AbstractNet(nn.Module):
+    def __init__(self, net_descriptor: NeuralDescriptor):
         super().__init__()
 
         self.descriptor = copy.deepcopy(net_descriptor)
         self.connections = self.descriptor.connections
         self.in_connections = self.descriptor.incoming_connections
-        self.input_shapes = dict()
-        self.input_channels = dict()
-
-        self.first_layer = self.descriptor.first_layer
-        self.last_layer = self.descriptor.last_layer
-        self.keep_dimensions = keep_dimensions
-
-        self.functional = True
-        if len(self.in_connections[self.last_layer]) == 0:
-            self.functional = False
-            return
-
-        if len(self.connections[self.first_layer]) == 0:
-            self.functional = False
-            return
-
-        self.layers = dict()
-        self.num_classes = num_classes
-
-        # Get all paths
-        layer_dict = self.__name_all_paths(self.descriptor.layers)
-
-        self.input_shapes[self.first_layer] = input_shape
-        self.input_channels[self.first_layer] = input_channels
-        self.data_shape = len(input_shape)
-
-        self.hidden_outs = dict()
-        self.recursions = [[x[-1], x[0]] for x in self.get_recursions()]
-        self.recursion_paths = [x[1:-1] for x in self.get_recursions()]
-        self.recursion_origins = [x[0] for x in self.recursions]
-
-        self.scale_all_layers()
-        self.connections = self.descriptor.connections
-        self.in_connections = self.descriptor.incoming_connections
-        # Instantiate all layers
-        for key in layer_dict.keys():
-            # Get layer type and parameters
-            layer, params = layer_dict[key]
-            # Get instance
-            layer_instance = layer(**params)
-            if untrained:
-                for param in layer_instance.parameters():
-                    param.requires_grad = False
-            # Set as attribute
-            setattr(self, key, layer_instance)
-            self.layers[key] = getattr(self, key)
-
-        self.flatten = Flatten()
-
-        in_sz = self.__get_flat_out_size_dynamic()
-
-        if dense_part is None:
-            dense_part = get_dense_net(1, num_classes, nn.Identity())
-
-        fc_layers = dense_part(in_sz)
-
-        self.fc_layers = {}
-        for key, value in fc_layers.items():
-            setattr(self, key, value)
-            self.fc_layers[key] = getattr(self, key)
-
-    def __get_flat_out_size_dynamic(self):
-        self.eval()  # Set to eval so batchnorm won't complain
-        input_channels = self.input_channels[self.first_layer]
-        input_shape = self.input_shapes[self.first_layer]
-        dummy = torch.randn([1, input_channels, *input_shape])
-        out = self.flatten(self.__internal_fwd(dummy))
-        final_sz = list(out.shape)[-1]
-
-        self.train()  # ReSet to train
-        return final_sz
-
-    def __internal_fwd(self, x: Tensor):
-        """ Implement the forward pass
-        """
-        x = self.layers[self.first_layer](x)
-        outs = {self.first_layer: x}
-
-        keys = self.connections.keys()
-        # Example: key='layer_1_1'
-        for key in sorted(keys):
-            if key is self.first_layer:
-                continue
-            other_in = None
-            inputs = self.in_connections[key]
-            for from_layer in set(inputs):
-
-                if int(from_layer.split('_')[0]) > int(key.split('_')[0]):
-                    continue
-
-                else:
-                    tmp_in = outs[from_layer]
-
-                other_in = 0 if other_in is None else other_in
-                if other_in is not None:
-                    other_in = tmp_in + other_in
-
-                else:
-                    other_in = tmp_in
-
-            outs[key] = self.layers[key](other_in)
-
-        return outs[self.last_layer]
 
     def forward(self, x: Tensor):
-
-        x = self.flatten(self.__internal_fwd(x))
-        for layer in self.fc_layers:
-            x = self.fc_layers[layer](x)
-
-        return x
-
-    def scale_all_layers(self):
-        """ Scale all inputs for multi-input layers.
-        """
-        self.eval()  # Evaluation mode so batchnorm won't complain
-        scaled = set()
-        scaled.add(self.first_layer)
-        not_scaled = list(self.descriptor.layers.keys())
-        not_scaled.remove(self.first_layer)
-        self.pure_recursions = set()
-        while len(not_scaled) > 0:
-
-            for target in not_scaled:
-
-                origins = []
-                tmp = self.in_connections[target]
-                origin_set = set(tmp)
-
-                # If the origins are already scaled, proceed
-                if origin_set <= scaled:
-                    self.scale_target_inputs(target, origin_set)
-                    scaled.add(target)
-                    not_scaled.remove(target)
-
-        self.eval()  # Back to training mode
-
-    def scale_target_inputs(self, target: str, origins: List[str]):
-        """ Scale the selected origins layers, in order to concatenate
-            inputs to target.
-
-            Parameters
-            ----------
-            target : string
-                Name of the input layer
-
-            origins : list[string]
-                Names of output layers
-        """
-
-        min_sz, min_channels = self.get_min_input_size(target, origins)
-        if self.keep_dimensions is not None:
-            min_sz = self.keep_dimensions
-
-        if 'in_channels' in self.descriptor.layers[target][1]:
-            self.descriptor.layers[target][1]['in_channels'] = min_channels
-        elif 'num_features' in self.descriptor.layers[target][1]:
-            self.descriptor.layers[target][1]['num_features'] = min_channels
-
-        self.input_shapes[target] = min_sz
-        self.input_channels[target] = min_channels
-
-        for origin in origins:
-            self.scale_layer_outputs(origin, target, min_sz, min_channels)
-
-    def scale_layer_outputs(self, origin: str, target: str, min_sz: int, min_channels: int):
-        """ Scale the selected origin layer, in order to concatenate
-            inputs to target.
-
-            Parameters
-            ----------
-            target : string
-                Name of the input layer
-
-            origin : string
-                Names of output layer
-
-            min_sz : int
-                The desired output size
-                (minimum size that enables concatenation)
-
-            min_channels : int
-                The desired output channels
-                (minimum channels that enable concatenation)
-        """
-
-        shape = self.get_output_shape(origin)
-        channels = shape[1]
-        dimensions = shape[2:]
-
-        origin_out = dimensions
-        out_ch = channels
-
-        layer_name = origin+'_0sizescale_'+target
-        ch_name = origin+'_1chanscale_'+target
-
-        layer = None
-        params = None
-        # If the target is a flatten layer do nothing.
-        if (self.descriptor.layers[target][0] is Flatten):
-            return
-        if (self.descriptor.layers[origin][0] is nn.Linear) and (self.descriptor.layers[target][0] is nn.Linear):
-            return
-        # Else if the output size differs from the input size
-        # scale the output size
-        elif not origin_out == min_sz:
-            layer = SizeScaleLayer
-            params = {'final_size': min_sz}
-
-        if layer is not None:
-            self.descriptor.add_layer(layer, params, name=layer_name)
-            self.descriptor.connect_layers(origin, layer_name)
-            self.descriptor.connect_layers(layer_name, target)
-            self.descriptor.disconnect_layers(origin, target)
-
-            self.input_shapes[layer_name] = origin_out
-            self.input_channels[layer_name] = out_ch
-            self.input_shapes[target] = min_sz
-
-        # Scale channels as well
-        if out_ch is not min_channels:
-            ch_layer = nn.Conv2d
-            if self.data_shape == 1:
-                ch_layer = nn.Conv1d
-
-            ch_params = {'in_channels': out_ch, 'out_channels': min_channels,
-                         'kernel_size': 1}
-            self.descriptor.add_layer(ch_layer, ch_params, name=ch_name)
-            if layer is not None:
-                self.descriptor.connect_layers(layer_name, ch_name)
-                self.descriptor.connect_layers(ch_name, target)
-                self.descriptor.disconnect_layers(layer_name, target)
-
-            else:
-                self.descriptor.connect_layers(origin, ch_name)
-                self.descriptor.connect_layers(ch_name, target)
-                self.descriptor.disconnect_layers(origin, target)
-
-            self.input_shapes[ch_name] = self.input_shapes[target]
-            self.input_channels[ch_name] = self.input_channels[target]
-            self.input_channels[target] = min_channels
-
-    def get_min_input_size(self, target: str, origins: List[str]):
-        """ Get the minimum input size that enables concatenation.
-
-            Parameters
-            ----------
-            target : string
-                Name of the input layer
-
-            origins : list[string]
-                Names of output layers
-
-            Returns
-            -------
-            min_dimensions : int
-                Minimum size
-
-            min_channels : int
-                Minimum channels
-
-        """
-        if self.descriptor.layers[target][0] is nn.Linear:
-            return self.descriptor.layers[target][1]['in_features'], 1
-
-        min_channels = 0
-        min_dimensions = np.zeros(len(self.input_shapes[self.first_layer]))
-
-        if MIN_MAX_DIMENSIONS == 'MIN':
-            min_channels += 1e+10
-            min_dimensions += 1e+10
-
-        for node in origins:
-            shape = self.get_output_shape(node)
-            channels = shape[1]
-            dimensions = shape[2:]
-
-            if MIN_MAX_DIMENSIONS == 'MAX':
-                min_dimensions = np.maximum(dimensions, min_dimensions)
-                min_channels = np.maximum(channels, min_channels)
-            else:
-                min_dimensions = np.minimum(dimensions, min_dimensions)
-                min_channels = np.minimum(channels, min_channels)
-
-        # Assure input is not smaller than kernel size
-        if 'kernel_size' in self.descriptor.layers[target][1]:
-            kernel = self.descriptor.layers[target][1]['kernel_size']
-            if (min_dimensions < kernel).any():
-                min_dimensions = np.zeros(
-                    len(self.input_shapes[self.first_layer]))+kernel
-
-        return min_dimensions.astype(int).tolist(), min_channels.astype(int).tolist()
-
-    def get_output_shape(self, node: str):
-        """Calculate the output shape of a layer
-
-        Parameters
-        ----------
-        node : string
-            Name of the layer
-
-        Returns
-        -------
-        The layer's output shape
-
-        """
-        node_class = self.descriptor.layers[node][0]
-        params = self.descriptor.layers[node][1]
-
-        input_shapes = self.input_shapes[node]
-        input_channels = self.input_channels[node]
-
-        dummy = torch.randn((1, input_channels, *input_shapes))
-        dummy_layer = node_class(**params)
-        dummy_out = dummy_layer(dummy)
-        return list(dummy_out.size())
+        raise NotImplementedError
 
     def remove_connection(self, origin: str, target: str):
         """Remove a connection from the network
@@ -424,8 +73,8 @@ class NeuralNet(nn.Module):
         self.in_connections[target].append(origin)
         self.connections[origin].append(target)
 
-    def __name_all_paths(self, layers_in: Dict[str, List],
-                         acyclic: bool = True):
+    def _name_all_paths(self, layers_in: Dict[str, List],
+                        acyclic: bool = True):
         """Find all the possible paths from the input layer to the output layer
            and name the nodes according to their depth.
 
@@ -657,3 +306,629 @@ class NeuralNet(nn.Module):
 
         ax.set_xlim(xmin=min_x-half_spacing, xmax=max_x+half_spacing)
         plt.show()
+
+
+class NeuralNet(_AbstractNet):
+    """Basic class, implementing a deep neural net.
+    """
+
+    def __init__(self, net_descriptor: NeuralDescriptor, num_classes: int,
+                 input_shape: Tuple,
+                 input_channels: int, sort: bool = False,
+                 untrained: bool = False,
+                 keep_dimensions: int = None,
+                 dense_part=None):
+        """Generates the pytorch graph of the network.
+
+        Parameters
+        ----------
+        net_descriptor : NeuralDescriptor
+            A descriptor of the netowrk's structure.
+            (see :class:`~.neural_descriptor.NeuralDescriptor`)
+
+        num_classes : int
+            The number of classes (output layer neurons) of the network.
+
+        input_shape : tuple
+            Shape of inputs.
+
+        input_channels : int
+            Number of input channels.
+
+        sort : bool
+            If set to True, the depth of each layer will be
+            added before its name.
+
+        keep_dimensions: int
+            This parameter dicatates the rescaling of layer outputs.
+            The outputs are rescaled to 'keep_dimensions' size.
+            If None, the network will not rescale the outputs at all.
+
+        """
+        super().__init__(net_descriptor)
+
+        # self.descriptor = copy.deepcopy(net_descriptor)
+        # self.connections = self.descriptor.connections
+        # self.in_connections = self.descriptor.incoming_connections
+        self.input_shapes = dict()
+        self.input_channels = dict()
+
+        self.first_layer = self.descriptor.first_layer
+        self.last_layer = self.descriptor.last_layer
+        self.keep_dimensions = keep_dimensions
+
+        self.functional = True
+        if len(self.in_connections[self.last_layer]) == 0:
+            self.functional = False
+            return
+
+        if len(self.connections[self.first_layer]) == 0:
+            self.functional = False
+            return
+
+        self.layers = dict()
+        self.num_classes = num_classes
+
+        # Get all paths
+        layer_dict = self._name_all_paths(self.descriptor.layers)
+
+        self.input_shapes[self.first_layer] = input_shape
+        self.input_channels[self.first_layer] = input_channels
+        self.data_shape = len(input_shape)
+
+        self.hidden_outs = dict()
+        self.recursions = [[x[-1], x[0]] for x in self.get_recursions()]
+        self.recursion_paths = [x[1:-1] for x in self.get_recursions()]
+        self.recursion_origins = [x[0] for x in self.recursions]
+
+        self.scale_all_layers()
+        self.connections = self.descriptor.connections
+        self.in_connections = self.descriptor.incoming_connections
+        # Instantiate all layers
+        for key in layer_dict.keys():
+            # Get layer type and parameters
+            layer, params = layer_dict[key]
+            # Get instance
+            layer_instance = layer(**params)
+            if untrained:
+                for param in layer_instance.parameters():
+                    param.requires_grad = False
+            # Set as attribute
+            setattr(self, key, layer_instance)
+            self.layers[key] = getattr(self, key)
+
+        self.flatten = Flatten()
+
+        in_sz = self.__get_flat_out_size_dynamic()
+
+        if dense_part is None:
+            dense_part = get_dense_net(1, num_classes, nn.Identity())
+
+        fc_layers = dense_part(in_sz)
+
+        self.fc_layers = {}
+        for key, value in fc_layers.items():
+            setattr(self, key, value)
+            self.fc_layers[key] = getattr(self, key)
+
+    def __get_flat_out_size_dynamic(self):
+        self.eval()  # Set to eval so batchnorm won't complain
+        input_channels = self.input_channels[self.first_layer]
+        input_shape = self.input_shapes[self.first_layer]
+        dummy = torch.randn([1, input_channels, *input_shape])
+        out = self.flatten(self.__internal_fwd(dummy))
+        final_sz = list(out.shape)[-1]
+
+        self.train()  # ReSet to train
+        return final_sz
+
+    def __internal_fwd(self, x: Tensor):
+        """ Implement the forward pass
+        """
+        x = self.layers[self.first_layer](x)
+        outs = {self.first_layer: x}
+
+        keys = self.connections.keys()
+        # Example: key='layer_1_1'
+        for key in sorted(keys):
+            if key is self.first_layer:
+                continue
+            other_in = None
+            inputs = self.in_connections[key]
+            for from_layer in set(inputs):
+
+                if int(from_layer.split('_')[0]) > int(key.split('_')[0]):
+                    continue
+
+                else:
+                    tmp_in = outs[from_layer]
+
+                other_in = 0 if other_in is None else other_in
+                if other_in is not None:
+                    other_in = tmp_in + other_in
+
+                else:
+                    other_in = tmp_in
+
+            outs[key] = self.layers[key](other_in)
+
+        return outs[self.last_layer]
+
+    def forward(self, x: Tensor):
+
+        x = self.flatten(self.__internal_fwd(x))
+        for layer in self.fc_layers:
+            x = self.fc_layers[layer](x)
+
+        return x
+
+    def scale_all_layers(self):
+        """ Scale all inputs for multi-input layers.
+        """
+        self.eval()  # Evaluation mode so batchnorm won't complain
+        scaled = set()
+        scaled.add(self.first_layer)
+        not_scaled = list(self.descriptor.layers.keys())
+        not_scaled.remove(self.first_layer)
+        self.pure_recursions = set()
+        while len(not_scaled) > 0:
+
+            for target in not_scaled:
+
+                tmp = self.in_connections[target]
+                origin_set = set(tmp)
+
+                # If the origins are already scaled, proceed
+                if origin_set <= scaled:
+                    self.scale_target_inputs(target, origin_set)
+                    scaled.add(target)
+                    not_scaled.remove(target)
+
+        self.eval()  # Back to training mode
+
+    def scale_target_inputs(self, target: str, origins: List[str]):
+        """ Scale the selected origins layers, in order to concatenate
+            inputs to target.
+
+            Parameters
+            ----------
+            target : string
+                Name of the input layer
+
+            origins : list[string]
+                Names of output layers
+        """
+
+        min_sz, min_channels = self.get_min_input_size(target, origins)
+        if self.keep_dimensions is not None:
+            min_sz = self.keep_dimensions
+
+        if 'in_channels' in self.descriptor.layers[target][1]:
+            self.descriptor.layers[target][1]['in_channels'] = min_channels
+        elif 'num_features' in self.descriptor.layers[target][1]:
+            self.descriptor.layers[target][1]['num_features'] = min_channels
+
+        self.input_shapes[target] = min_sz
+        self.input_channels[target] = min_channels
+
+        for origin in origins:
+            self.scale_layer_outputs(origin, target, min_sz, min_channels)
+
+    def scale_layer_outputs(self, origin: str, target: str, min_sz: int, min_channels: int):
+        """ Scale the selected origin layer, in order to concatenate
+            inputs to target.
+
+            Parameters
+            ----------
+            target : string
+                Name of the input layer
+
+            origin : string
+                Names of output layer
+
+            min_sz : int
+                The desired output size
+                (minimum size that enables concatenation)
+
+            min_channels : int
+                The desired output channels
+                (minimum channels that enable concatenation)
+        """
+
+        shape = self.get_output_shape(origin)
+        channels = shape[1]
+        dimensions = shape[2:]
+
+        origin_out = dimensions
+        out_ch = channels
+
+        layer_name = origin+'_0sizescale_'+target
+        ch_name = origin+'_1chanscale_'+target
+
+        layer = None
+        params = None
+        # If the target is a flatten layer do nothing.
+        if (self.descriptor.layers[target][0] is Flatten):
+            return
+        if (self.descriptor.layers[origin][0] is nn.Linear) and (self.descriptor.layers[target][0] is nn.Linear):
+            return
+        # Else if the output size differs from the input size
+        # scale the output size
+        elif not origin_out == min_sz:
+            layer = SizeScaleLayer
+            params = {'final_size': min_sz}
+
+        if layer is not None:
+            self.descriptor.add_layer(layer, params, name=layer_name)
+            self.descriptor.connect_layers(origin, layer_name)
+            self.descriptor.connect_layers(layer_name, target)
+            self.descriptor.disconnect_layers(origin, target)
+
+            self.input_shapes[layer_name] = origin_out
+            self.input_channels[layer_name] = out_ch
+            self.input_shapes[target] = min_sz
+
+        # Scale channels as well
+        if out_ch is not min_channels:
+            ch_layer = nn.Conv2d
+            if self.data_shape == 1:
+                ch_layer = nn.Conv1d
+
+            ch_params = {'in_channels': out_ch, 'out_channels': min_channels,
+                         'kernel_size': 1}
+            self.descriptor.add_layer(ch_layer, ch_params, name=ch_name)
+            if layer is not None:
+                self.descriptor.connect_layers(layer_name, ch_name)
+                self.descriptor.connect_layers(ch_name, target)
+                self.descriptor.disconnect_layers(layer_name, target)
+
+            else:
+                self.descriptor.connect_layers(origin, ch_name)
+                self.descriptor.connect_layers(ch_name, target)
+                self.descriptor.disconnect_layers(origin, target)
+
+            self.input_shapes[ch_name] = self.input_shapes[target]
+            self.input_channels[ch_name] = self.input_channels[target]
+            self.input_channels[target] = min_channels
+
+    def get_min_input_size(self, target: str, origins: List[str]):
+        """ Get the minimum input size that enables concatenation.
+
+            Parameters
+            ----------
+            target : string
+                Name of the input layer
+
+            origins : list[string]
+                Names of output layers
+
+            Returns
+            -------
+            min_dimensions : int
+                Minimum size
+
+            min_channels : int
+                Minimum channels
+
+        """
+        if self.descriptor.layers[target][0] is nn.Linear:
+            return self.descriptor.layers[target][1]['in_features'], 1
+
+        min_channels = 0
+        min_dimensions = np.zeros(len(self.input_shapes[self.first_layer]))
+
+        if MIN_MAX_DIMENSIONS == 'MIN':
+            min_channels += 1e+10
+            min_dimensions += 1e+10
+
+        for node in origins:
+            shape = self.get_output_shape(node)
+            channels = shape[1]
+            dimensions = shape[2:]
+
+            if MIN_MAX_DIMENSIONS == 'MAX':
+                min_dimensions = np.maximum(dimensions, min_dimensions)
+                min_channels = np.maximum(channels, min_channels)
+            else:
+                min_dimensions = np.minimum(dimensions, min_dimensions)
+                min_channels = np.minimum(channels, min_channels)
+
+        # Assure input is not smaller than kernel size
+        if 'kernel_size' in self.descriptor.layers[target][1]:
+            kernel = self.descriptor.layers[target][1]['kernel_size']
+            if (min_dimensions < kernel).any():
+                min_dimensions = np.zeros(
+                    len(self.input_shapes[self.first_layer]))+kernel
+
+        return min_dimensions.astype(int).tolist(), min_channels.astype(int).tolist()
+
+    def get_output_shape(self, node: str):
+        """Calculate the output shape of a layer
+
+        Parameters
+        ----------
+        node : string
+            Name of the layer
+
+        Returns
+        -------
+        The layer's output shape
+
+        """
+        node_class = self.descriptor.layers[node][0]
+        params = self.descriptor.layers[node][1]
+
+        input_shapes = self.input_shapes[node]
+        input_channels = self.input_channels[node]
+
+        dummy = torch.randn((1, input_channels, *input_shapes))
+        dummy_layer = node_class(**params)
+        dummy_out = dummy_layer(dummy)
+        return list(dummy_out.size())
+
+
+class GraphRankNet(_AbstractNet):
+    """Basic class, implementing a GCN based ranking model.
+    """
+
+    def __init__(self, net_descriptor: NeuralDescriptor, num_classes: int,
+                 input_dimensions: int,
+                 sort: bool = False,
+                 untrained: bool = False):
+        """Generates the pytorch graph of the network.
+
+        Parameters
+        ----------
+        net_descriptor : NeuralDescriptor
+            A descriptor of the netowrk's structure.
+            (see :class:`~.neural_descriptor.NeuralDescriptor`)
+
+        num_classes : int
+            The number of classes (output layer neurons) of the network.
+
+        input_dimensions : int
+            Size of feature vector.
+
+        sort : bool
+            If set to True, the depth of each layer will be
+            added before its name.
+        """
+        super().__init__(net_descriptor)
+
+        self.dummy_param = nn.Parameter(torch.empty(0))
+
+        self.descriptor = copy.deepcopy(net_descriptor)
+        self.connections = self.descriptor.connections
+        self.in_connections = self.descriptor.incoming_connections
+        self.input_shapes = {}
+        self.first_layer = self.descriptor.first_layer
+        self.last_layer = self.descriptor.last_layer
+
+        self.functional = True
+        if len(self.in_connections[self.last_layer]) == 0:
+            self.functional = False
+            return
+
+        if len(self.connections[self.first_layer]) == 0:
+            self.functional = False
+            return
+
+        self.layers = dict()
+        self.num_classes = num_classes
+        # Get all paths
+
+        layer_dict = self._name_all_paths(self.descriptor.layers)
+
+        self.input_shapes[self.first_layer] = input_dimensions
+
+        self.scale_all_layers()
+        # Instantiate all layers
+        for key in layer_dict.keys():
+            # Get layer type and parameters
+            layer, params = layer_dict[key]
+            # Get instance
+            layer_instance = layer(**params)
+            if untrained:
+                for param in layer_instance.parameters():
+                    param.requires_grad = False
+            # Set as attribute
+            setattr(self, key, layer_instance)
+            self.layers[key] = getattr(self, key)
+
+        self.flatten = Flatten()
+        in_sz = self.__get_flat_out_size()
+        self.fc1 = nn.Linear(in_sz*2, in_sz//2)
+        self.final_layer = nn.Linear(in_sz//2, self.num_classes)
+        self.final_activation = nn.LogSoftmax(dim=1)
+
+        if self.num_classes == 1:  # Regression based ranking, single input
+            self.fc1 = nn.Linear(in_sz, in_sz//2)
+            self.fc2 = nn.Identity()
+            self.final_layer = nn.Linear(in_sz//2, self.num_classes)
+            self.final_activation = nn.Softplus()
+
+    def __get_flat_out_size(self):
+
+        in_sz = self.get_output_size(self.last_layer)
+        return in_sz
+
+    def __internal_fwd(self, g):
+        """ Implement the forward pass
+        """
+        device = self.dummy_param.device
+        with g.local_scope():
+            # print('FORWARD', '*'*30)
+            x = g.ndata['x'].to(device).float()
+            x = self.layers[self.first_layer](x)
+            outs = {self.first_layer: x}
+
+            keys = self.connections.keys()
+            # Example: key='layer_1_1'
+            for key in sorted(keys):
+                # print('*')
+                if key is self.first_layer:
+                    continue
+                # from_layer = [layer_0_1, layer_0_2]
+                other_in = None
+                inputs = self.in_connections[key]
+                for from_layer in set(inputs):
+                    if int(from_layer.split('_')[0]) > int(key.split('_')[0]):
+                        # tmp_in = self.hidden_outs[from_layer]
+                        continue
+
+                    else:
+                        # tmp_in = layer_0_1(x)
+                        tmp_in = outs[from_layer]
+
+                    # THIS "if" is for DEBUG ONLY!!!!
+                    # if not tmp_in.shape[-1] == self.get_output_size(from_layer):
+                    #     print(from_layer, '->', key)
+                    #     print('E:', self.get_output_size(from_layer),
+                    #           'R:', tmp_in.shape[-1])
+
+                    if other_in is not None:
+                        # print('-OTHER INS-', key, inputs)
+                        # print(other_in.shape, tmp_in.shape)
+                        other_in = torch.cat((tmp_in, other_in), 1)
+
+                    else:
+                        other_in = tmp_in
+
+                if type(self.layers[key]).__name__ in ('SAGEConv', 'AvgPooling', 'MaxPooling', 'SortPooling'):
+                    outs[key] = self.layers[key](g, other_in)
+                else:
+                    outs[key] = self.layers[key](other_in)
+
+            return outs[self.last_layer]
+
+    def forward(self, g):
+
+        if self.num_classes > 1:
+            g1, g2 = g
+            flats1 = self.flatten(self.__internal_fwd(g1))
+            flats2 = self.flatten(self.__internal_fwd(g2))
+
+            # print(flats1.shape, flats2.shape)
+
+            h_d = torch.cat((flats1, flats2), 1)
+            x = F.relu6(self.fc1(h_d))
+            # x = self.bn1(x)
+            x = F.relu6(self.final_layer(x))
+            x = self.final_activation(x)
+            return x
+        else:
+            h_d = self.flatten(self.__internal_fwd(g))
+            x = F.relu6(self.fc1(h_d))
+            x = F.relu6(self.fc2(x))
+            x = self.final_layer(x)
+            x = self.final_activation(x)
+            return x
+
+    def scale_all_layers(self):
+        """ Scale all inputs for multi-input layers.
+        """
+        scaled = set()
+        scaled.add(self.first_layer)
+        not_scaled = list(self.descriptor.layers.keys())
+        not_scaled.remove(self.first_layer)
+        self.pure_recursions = set()
+        while len(not_scaled) > 0:
+
+            for target in not_scaled:
+
+                tmp = self.in_connections[target]
+                origin_set = set(tmp)
+
+                # If the origins are already scaled, proceed
+                if origin_set <= scaled:
+                    self.scale_target_inputs(target, origin_set)
+                    scaled.add(target)
+                    not_scaled.remove(target)
+
+    def scale_target_inputs(self, target: str, origins: List[str]):
+        """ Scale the selected origins layers, in order to concatenate
+            inputs to target.
+
+            Parameters
+            ----------
+            target : string
+                Name of the input layer
+
+            origins : list[string]
+                Names of output layers
+        """
+
+        min_sz = self.get_min_input_size(target, origins)
+
+        if 'in_channels' in self.descriptor.layers[target][1]:
+            self.descriptor.layers[target][1]['in_channels'] = min_sz
+        elif 'num_features' in self.descriptor.layers[target][1]:
+            self.descriptor.layers[target][1]['num_features'] = min_sz
+        elif 'in_feats' in self.descriptor.layers[target][1]:
+            self.descriptor.layers[target][1]['in_feats'] = min_sz
+
+        self.input_shapes[target] = min_sz
+
+    def get_min_input_size(self, target: str, origins: List[str]):
+        """ Get the minimum input size that enables concatenation.
+
+            Parameters
+            ----------
+            target : string
+                Name of the input layer
+
+            origins : list[string]
+                Names of output layers
+
+            Returns
+            -------
+            min_dimensions : int
+                Minimum size
+
+
+        """
+
+        min_dimensions = 0
+
+        for node in origins:
+            dimensions = self.get_output_size(node)
+            min_dimensions += dimensions
+
+        return min_dimensions
+
+    def get_output_size(self, node: str):
+        """Calculate the output size of a layer
+
+        Parameters
+        ----------
+        node : string
+            Name of the layer
+
+        Returns
+        -------
+        The layer's output size
+
+        """
+        node_class = self.descriptor.layers[node][0]
+
+        if node == self.first_layer:
+            return self.input_shapes[node][0]
+
+        if node_class is Flatten:
+            return self.input_shapes[node]
+
+        elif node_class is nn.Linear:
+            return self.descriptor.layers[node][1]['out_features']
+
+        elif node_class is nn.BatchNorm1d:
+            return self.input_shapes[node]
+
+        elif node_class in types_dict['activations']:
+            return self.input_shapes[node]
+
+        elif 'out_feats' in self.descriptor.layers[node][1]:
+            return self.descriptor.layers[node][1]['out_feats']
+        elif 'k' in self.descriptor.layers[node][1]:
+            return self.descriptor.layers[node][1]['k'] * self.input_shapes[node]
+        else:
+            return self.input_shapes[node]
