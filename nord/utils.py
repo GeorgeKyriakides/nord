@@ -20,6 +20,7 @@ import torch
 from tqdm import tqdm
 
 LOGS_PATH = 'Log_Files'
+DATA_ROOT = './data'
 
 
 def singleton(class_):

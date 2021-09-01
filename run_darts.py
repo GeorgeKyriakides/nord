@@ -1,3 +1,5 @@
-from nord.design.differenetiable.darts.darts import main
+from nord.design.differenetiable.distributed_darts.distributed_darts import mymain
 
-main()
+
+if __name__ == '__main__':
+    mymain()

@@ -3,9 +3,9 @@ import traceback
 
 import networkx as nx
 from nasbench import api
-from nord.utils import pdownload
+from nord.utils import pdownload, DATA_ROOT
 
-NASBENCH_TFRECORD = './data/nasbench_only108.tfrecord'
+NASBENCH_TFRECORD = DATA_ROOT+'/nasbench_only108.tfrecord'
 file_url = 'https://storage.googleapis.com/nasbench/nasbench_only108.tfrecord'
 
 INPUT = 'input'
