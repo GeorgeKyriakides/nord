@@ -1,6 +1,0 @@
-2021-09-09 20:02:00,618 gpu device = 0
-2021-09-09 20:02:00,619 args = Namespace(arch_learning_rate=0.0003, arch_weight_decay=0.001, batch_size=64, cutout=False, cutout_length=16, data='../data', drop_path_prob=0.3, epochs=50, gpu=0, grad_clip=5, init_channels=8, layers=4, learning_rate=0.025, learning_rate_min=0.001, model_path='saved_models', momentum=0.9, report_freq=50, save='search-EXP-20210909-170152', seed=2, train_portion=0.5, unrolled=False, weight_decay=0.0003)
-2021-09-09 20:02:02,516 param size = 0.069682MB
-2021-09-09 20:02:02,560 epoch 0 lr 2.495266e-02
-2021-09-09 20:02:02,562 genotype = Genotype(normal=[('dil_conv_5x5', 1), ('skip_connect', 0), ('sep_conv_5x5', 1), ('avg_pool_3x3', 0), ('sep_conv_3x3', 1), ('max_pool_3x3', 0), ('max_pool_3x3', 2), ('sep_conv_5x5', 1)], normal_concat=range(2, 6), reduce=[('dil_conv_5x5', 1), ('max_pool_3x3', 0), ('max_pool_3x3', 1), ('skip_connect', 0), ('sep_conv_5x5', 1), ('dil_conv_5x5', 0), ('sep_conv_3x3', 0), ('sep_conv_3x3', 2)], reduce_concat=range(2, 6))
-2021-09-09 20:02:12,248 train 000 2.334148e+00 4.687500 53.125000
