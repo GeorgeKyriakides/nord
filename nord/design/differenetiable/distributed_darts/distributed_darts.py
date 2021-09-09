@@ -90,6 +90,7 @@ def get_arch_params(model):
 
 
 def main(rank, world_size):
+    print('MY RANK ',rank,' WORLD SIZE ', world_size)
     if not torch.cuda.is_available():
         logging.info('no gpu device available')
         sys.exit(1)
@@ -203,13 +204,13 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
         n = input.size(0)
 
         input = Variable(input, requires_grad=False).cuda()
-        target = Variable(target, requires_grad=False).cuda(async=True)
+        target = Variable(target, requires_grad=False).cuda()
 
         # get a random minibatch from the search queue with replacement
         input_search, target_search = next(iter(valid_queue))
         input_search = Variable(input_search, requires_grad=False).cuda()
         target_search = Variable(
-            target_search, requires_grad=False).cuda(async=True)
+            target_search, requires_grad=False).cuda()
 
         architect.step(input, target, input_search, target_search,
                        lr, optimizer, unrolled=args.unrolled)
