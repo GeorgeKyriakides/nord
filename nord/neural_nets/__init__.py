@@ -8,11 +8,7 @@ Created on Sun Aug  5 18:54:54 2018
 
 
 from . import layers
-
-try:
-    from .benchmark_evaluators import BenchmarkEvaluator
-except Exception as e:
-    print('Could not import benechmark evaluators.')
+from .benchmark_evaluators import BenchmarkEvaluator
 from .neural_builder import NeuralNet
 from .neural_descriptor import NeuralDescriptor
 from .neural_evaluators import (DistributedEvaluator, LocalBatchEvaluator,

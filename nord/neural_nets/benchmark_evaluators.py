@@ -2,7 +2,10 @@ import os
 import traceback
 
 import networkx as nx
-from nasbench import api
+try:
+    from nasbench import api
+except Exception as e:
+    print('Could not import benechmark evaluators.')
 from nord.utils import pdownload, DATA_ROOT
 
 NASBENCH_TFRECORD = DATA_ROOT+'/nasbench_only108.tfrecord'

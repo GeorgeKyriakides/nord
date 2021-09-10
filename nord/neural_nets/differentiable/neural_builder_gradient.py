@@ -233,27 +233,40 @@ class DistributedDARTSNet(nn.Module):
         logits = self(input)
         return self._criterion(logits, target)
 
+    # def _initialize_alphas(self):
+    #     k = sum(1 for i in range(self._steps) for n in range(2+i))
+    #     num_ops = len(PRIMITIVES)
+
+    #     #  Distributed Data Parallel friendly
+
+    #     self.arch_alphas_normal = nn.Parameter(Variable(
+    #         1e-3*torch.randn(k, num_ops).cuda()))
+    #     self.arch_alphas_reduce = nn.Parameter(Variable(
+    #         1e-3*torch.randn(k, num_ops).cuda()))
+
+    #     self._arch_parameters = [
+    #         self.arch_alphas_normal,
+    #         self.arch_alphas_reduce,
+    #     ]
+
+    #     #  Distributed Data Parallel friendly
+    #     self.register_parameter(
+    #         name='arch_alphas_normal', param=self.arch_alphas_normal)
+    #     self.register_parameter(
+    #         name='arch_alphas_reduce', param=self.arch_alphas_reduce)
+
     def _initialize_alphas(self):
         k = sum(1 for i in range(self._steps) for n in range(2+i))
         num_ops = len(PRIMITIVES)
 
-        #  Distributed Data Parallel friendly
-
-        self.arch_alphas_normal = nn.Parameter(Variable(
-            1e-3*torch.randn(k, num_ops).cuda()))
-        self.arch_alphas_reduce = nn.Parameter(Variable(
-            1e-3*torch.randn(k, num_ops).cuda()))
-
+        self.arch_alphas_normal = Variable(
+            1e-3*torch.randn(k, num_ops).cuda(), requires_grad=True)
+        self.arch_alphas_reduce = Variable(
+            1e-3*torch.randn(k, num_ops).cuda(), requires_grad=True)
         self._arch_parameters = [
             self.arch_alphas_normal,
             self.arch_alphas_reduce,
         ]
-
-        #  Distributed Data Parallel friendly
-        self.register_parameter(
-            name='arch_alphas_normal', param=self.arch_alphas_normal)
-        self.register_parameter(
-            name='arch_alphas_reduce', param=self.arch_alphas_reduce)
 
     def arch_parameters(self):
         return self._arch_parameters
