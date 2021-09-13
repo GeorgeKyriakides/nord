@@ -1,5 +1,5 @@
-import numpy as np
 import torch
+import numpy as np
 import torch.nn as nn
 from torch.autograd import Variable
 
@@ -14,9 +14,13 @@ def get_model_params(model):
     return return_params
 
 
+# def get_arch_params(model):
+#     return_params = [p for name, p in model.named_parameters()
+#                      if 'arch' in name]
+#     return return_params
+
 def get_arch_params(model):
-    return_params = [p for name, p in model.named_parameters()
-                     if 'arch' in name]
+    return_params = model.module._arch_parameters
     return return_params
 
 

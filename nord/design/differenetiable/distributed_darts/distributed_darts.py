@@ -68,10 +68,14 @@ def main(rank, args, world_size):
             target_search = Variable(
                 target_search, requires_grad=False).cuda()
 
-            if rank == 0:
-                architect.step(input, target, input_search, target_search,
-                               lr, optimizer, unrolled=args.unrolled)
-            dist.broadcast_object_list(model.state_dict(), src=0)
+            # if rank == 0:
+            #     architect.step(input, target, input_search, target_search,
+            #                    lr, optimizer, unrolled=args.unrolled)
+            # dist.broadcast_object_list(model.state_dict(), src=0)
+
+            architect.step(input, target, input_search, target_search,
+                lr, optimizer, unrolled=args.unrolled)
+
             optimizer.zero_grad()
             logits = model(input)
             loss = criterion(logits, target)
