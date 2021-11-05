@@ -1,5 +1,7 @@
-from nord.design.differenetiable.mpi_darts.distributed_darts import mymain
+# from nord.design.differenetiable.mpi_darts.distributed_darts import mymain
 # from nord.design.differenetiable.darts.darts import main
+
+from nord.design.differenetiable.distributed_darts.distributed_darts import mymain
 import argparse
 
 parser = argparse.ArgumentParser("cifar")
@@ -45,5 +47,5 @@ parser.add_argument('--arch_weight_decay', type=float,
 
 
 if __name__ == '__main__':
-    # mymain(parser, 2)
-    mymain(parser)
+    mymain(parser, 2)
+    # mymain(parser)

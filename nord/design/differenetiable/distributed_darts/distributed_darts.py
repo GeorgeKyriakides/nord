@@ -74,7 +74,7 @@ def main(rank, args, world_size):
             # dist.broadcast_object_list(model.state_dict(), src=0)
 
             architect.step(input, target, input_search, target_search,
-                lr, optimizer, unrolled=args.unrolled)
+                           lr, optimizer, unrolled=args.unrolled)
 
             optimizer.zero_grad()
             logits = model(input)
@@ -177,7 +177,7 @@ def main(rank, args, world_size):
     # train_data = dset.CIFAR10(
     #     root=args.data, train=True, download=True, transform=train_transform)
 
-    trainloader, testloader, _ = get_fashion_mnist(percentage=0.1)
+    trainloader, testloader, _ = get_fashion_mnist(percentage=0.01)
     train_data = trainloader.dataset
 
     num_train = len(train_data)
