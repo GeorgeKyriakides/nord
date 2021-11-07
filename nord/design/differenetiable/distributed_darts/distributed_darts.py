@@ -232,6 +232,6 @@ def run_demo(demo_fn, args, world_size, procs_number):
              join=True)
 
 
-def mymain(parser, n):
+def mymain(parser):
     args = parser.parse_args()
     run_demo(main, args, args.world_size, torch.cuda.device_count())
