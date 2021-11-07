@@ -177,7 +177,7 @@ def main(rank, args, world_size):
     # train_data = dset.CIFAR10(
     #     root=args.data, train=True, download=True, transform=train_transform)
 
-    trainloader, testloader, _ = get_fashion_mnist(percentage=0.1)
+    trainloader, testloader, _ = get_fashion_mnist(percentage=0.01)
     train_data = trainloader.dataset
 
     num_train = len(train_data)
