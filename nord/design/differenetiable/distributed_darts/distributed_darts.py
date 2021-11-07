@@ -27,9 +27,9 @@ from .architect import Architect
 CIFAR_CLASSES = 10
 
 
-def setup(rank, world_size):
-    os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '12355'
+def setup(rank, world_size, args):
+    os.environ['MASTER_ADDR'] = args.master_address
+    os.environ['MASTER_PORT'] = args.master_port
     os.environ['TORCH_DISTRIBUTED_DEBUG'] = 'DETAIL'
 
     # initialize the process group
@@ -225,13 +225,13 @@ def main(rank, args, world_size):
         utils.save(model, os.path.join(args.save, 'weights.pt'))
 
 
-def run_demo(demo_fn, args, world_size):
+def run_demo(demo_fn, args, world_size, procs_number):
     mp.spawn(demo_fn,
              args=(args, world_size,),
-             nprocs=world_size,
+             nprocs=procs_number,
              join=True)
 
 
 def mymain(parser, n):
     args = parser.parse_args()
-    run_demo(main, args, n)
+    run_demo(main, args, args.world_size, torch.cuda.device_count())

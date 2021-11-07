@@ -47,9 +47,11 @@ parser.add_argument('--master_address', type=str,
 
 parser.add_argument('--master_port', type=str,
                     default=None, help='master node port')
-
 parser.add_argument('--master_port', type=str,
                     default=None, help='master node port')
 
+parser.add_argument('--world_size', type=int,
+                    default=None, help='how many gpus')
+
 if __name__ == '__main__':
-    mymain(parser, 2)
+    mymain(parser)
