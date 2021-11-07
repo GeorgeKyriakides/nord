@@ -1,5 +1,6 @@
-from nord.design.differenetiable.mpi_darts.distributed_darts import mymain
-# from nord.design.differenetiable.darts.darts import main
+# from nord.design.differenetiable.mpi_darts.distributed_darts import mymain
+# from nord.design.differenetiable.distributed_darts.distributed_darts import mymain
+from nord.design.differenetiable.darts.darts import main
 import argparse
 
 parser = argparse.ArgumentParser("cifar")
@@ -16,10 +17,10 @@ parser.add_argument('--weight_decay', type=float,
 parser.add_argument('--report_freq', type=float,
                     default=50, help='report frequency')
 parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
-parser.add_argument('--epochs', type=int, default=50,
+parser.add_argument('--epochs', type=int, default=5,  # 50
                     help='num of training epochs')
 parser.add_argument('--init_channels', type=int,
-                    default=8, help='num of init channels')
+                    default=4, help='num of init channels')  # 8
 parser.add_argument('--layers', type=int, default=4,
                     help='total number of layers')
 parser.add_argument('--model_path', type=str,
@@ -46,4 +47,5 @@ parser.add_argument('--arch_weight_decay', type=float,
 
 if __name__ == '__main__':
     # mymain(parser, 2)
-    mymain(parser)
+    # mymain(parser)
+    main(parser)

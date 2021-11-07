@@ -74,7 +74,7 @@ def main(rank, args, world_size):
             # dist.broadcast_object_list(model.state_dict(), src=0)
 
             architect.step(input, target, input_search, target_search,
-                lr, optimizer, unrolled=args.unrolled)
+                           lr, optimizer, unrolled=args.unrolled)
 
             optimizer.zero_grad()
             logits = model(input)
