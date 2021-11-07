@@ -126,7 +126,7 @@ def main(rank, args, world_size):
         logging.info('no gpu device available')
         sys.exit(1)
 
-    setup(rank, world_size)
+    setup(rank, world_size, args)
 
     start_time = torch.Tensor([time.time()])
     dist.broadcast(start_time, 0)
