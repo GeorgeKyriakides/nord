@@ -129,8 +129,9 @@ def main(local_rank, args, world_size):
 
     setup(rank, world_size, args)
 
-    start_time = torch.Tensor([time.time()])
+    start_time = torch.Tensor([time.time()]).cuda()
     dist.broadcast(start_time, 0)
+    start_time = start_time.cpu()
     start_time = start_time.item()
     args.save = 'search-{}-{}'.format(args.save,
                                       time.strftime("%Y%m%d-%H%M%S", time.gmtime(start_time)))
