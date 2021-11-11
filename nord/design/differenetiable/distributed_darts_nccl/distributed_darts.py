@@ -50,6 +50,8 @@ def get_arch_params(model):
 
 def main(local_rank, args, world_size):
     rank = args.rank
+    if local_rank > 0:
+        rank = rank+local_rank
 
     def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
         objs = utils.AvgrageMeter()
