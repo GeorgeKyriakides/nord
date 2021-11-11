@@ -53,6 +53,8 @@ def main(local_rank, args, world_size):
     if local_rank > 0:
         rank = rank+local_rank
 
+    setup(rank, world_size, args)
+
     def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
         objs = utils.AvgrageMeter()
         top1 = utils.AvgrageMeter()
@@ -128,8 +130,6 @@ def main(local_rank, args, world_size):
     if not torch.cuda.is_available():
         logging.info('no gpu device available')
         sys.exit(1)
-
-    setup(rank, world_size, args)
 
     start_time = torch.Tensor([time.time()]).cuda()
     dist.broadcast(start_time, 0)
