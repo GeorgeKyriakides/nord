@@ -52,5 +52,8 @@ parser.add_argument('--master_port', type=str,
 parser.add_argument('--world_size', type=int,
                     default=None, help='how many gpus')
 
+parser.add_argument('--rank', type=int,
+                    default=None, help='my rank')
+
 if __name__ == '__main__':
     mymain(parser)

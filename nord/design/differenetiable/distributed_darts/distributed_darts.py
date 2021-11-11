@@ -48,7 +48,8 @@ def get_arch_params(model):
     return [p for name, p in model.named_parameters() if 'arch' in name]
 
 
-def main(rank, args, world_size):
+def main(args, world_size):
+    rank = args.rank
 
     def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
         objs = utils.AvgrageMeter()
