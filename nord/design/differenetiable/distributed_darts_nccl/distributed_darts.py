@@ -53,7 +53,16 @@ def main(local_rank, args, world_size):
     if local_rank > 0:
         rank = rank+local_rank
 
+    # Important to setup the world and assign gpus here for nccl
     setup(rank, world_size, args)
+    my_gpu = rank % torch.cuda.device_count()
+
+    np.random.seed(args.seed)
+    torch.cuda.set_device(my_gpu)
+    cudnn.benchmark = True
+    torch.manual_seed(args.seed)
+    cudnn.enabled = True
+    torch.cuda.manual_seed(args.seed)
 
     def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
         objs = utils.AvgrageMeter()
@@ -149,14 +158,6 @@ def main(local_rank, args, world_size):
     fh.setFormatter(logging.Formatter(log_format))
     logging.getLogger().addHandler(fh)
 
-    my_gpu = rank % torch.cuda.device_count()
-
-    np.random.seed(args.seed)
-    torch.cuda.set_device(my_gpu)
-    cudnn.benchmark = True
-    torch.manual_seed(args.seed)
-    cudnn.enabled = True
-    torch.cuda.manual_seed(args.seed)
     logging.info('gpu device = %d' % my_gpu)
     logging.info("args = %s", args)
 
