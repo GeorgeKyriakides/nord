@@ -134,7 +134,7 @@ def main(local_rank, args, world_size):
     start_time = start_time.item()
     args.save = 'search-{}-{}'.format(args.save,
                                       time.strftime("%Y%m%d-%H%M%S", time.gmtime(start_time)))
-    if dist.get_rank() == 0:
+    if local_rank == 0:
         utils.create_exp_dir(args.save, scripts_to_save=glob.glob('*.py'))
 
     dist.barrier()
