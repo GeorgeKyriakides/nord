@@ -73,6 +73,7 @@ def main(local_rank, args, world_size):
             model.train()
             n = input.size(0)
 
+            print(len(target))
             input = Variable(input, requires_grad=False).cuda()
             target = Variable(target, requires_grad=False).cuda()
 
