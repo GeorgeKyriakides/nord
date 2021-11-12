@@ -189,7 +189,7 @@ def main(local_rank, args, world_size):
     indices = list(range(num_train))
     split = int(np.floor(args.train_portion * num_train))
 
-    indices = np.random.shuffle(indices)
+    np.random.shuffle(indices)
 
     validation_data = torch.utils.data.Subset(
         train_data, indices[split:num_train])
