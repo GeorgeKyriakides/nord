@@ -210,11 +210,14 @@ def main(local_rank, args, world_size):
     train_queue = torch.utils.data.DataLoader(
         train_data, batch_size=args.batch_size,
         sampler=train_sampler,
+        train=True,
+        pin_memory=True,
         num_workers=0)
 
     valid_queue = torch.utils.data.DataLoader(
         train_data, batch_size=args.batch_size,
         sampler=validation_sampler,
+        pin_memory=True,
         num_workers=0)
 
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
