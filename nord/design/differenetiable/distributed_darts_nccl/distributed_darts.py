@@ -210,7 +210,6 @@ def main(local_rank, args, world_size):
     train_queue = torch.utils.data.DataLoader(
         train_data, batch_size=args.batch_size,
         sampler=train_sampler,
-        train=True,
         pin_memory=True,
         num_workers=0)
 
