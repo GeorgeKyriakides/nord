@@ -189,18 +189,33 @@ def main(local_rank, args, world_size):
     indices = list(range(num_train))
     split = int(np.floor(args.train_portion * num_train))
 
+    indices = np.random.shuffle(indices)
+
+    validation_data = torch.utils.data.Subset(
+        train_data, indices[split:num_train])
+    train_data = torch.utils.data.Subset(train_data, indices[:split])
+
+    train_sampler = torch.utils.data.distributed.DistributedSampler(
+        train_data,
+        num_replicas=args.world_size,
+        rank=rank
+    )
+
+    validation_sampler = torch.utils.data.distributed.DistributedSampler(
+        train_data,
+        num_replicas=args.world_size,
+        rank=rank
+    )
+
     train_queue = torch.utils.data.DataLoader(
         train_data, batch_size=args.batch_size,
-        sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[:split]),
+        sampler=train_sampler,
         num_workers=0)
-    # pin_memory=True, num_workers=2)
 
     valid_queue = torch.utils.data.DataLoader(
         train_data, batch_size=args.batch_size,
-        sampler=torch.utils.data.sampler.SubsetRandomSampler(
-            indices[split:num_train]),
+        sampler=validation_sampler,
         num_workers=0)
-    # pin_memory=True, num_workers=2)
 
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, float(args.epochs), eta_min=args.learning_rate_min)
