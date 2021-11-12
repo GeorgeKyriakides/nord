@@ -68,7 +68,7 @@ def main(local_rank, args, world_size):
         objs = utils.AvgrageMeter()
         top1 = utils.AvgrageMeter()
         top5 = utils.AvgrageMeter()
-        print(len(train_queue))
+        print('*'*30, 'TRAIN_QUEUE: ', len(train_queue))
         for step, (input, target) in enumerate(train_queue):
             model.train()
             n = input.size(0)
