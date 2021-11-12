@@ -68,12 +68,11 @@ def main(local_rank, args, world_size):
         objs = utils.AvgrageMeter()
         top1 = utils.AvgrageMeter()
         top5 = utils.AvgrageMeter()
-
+        print(len(train_queue))
         for step, (input, target) in enumerate(train_queue):
             model.train()
             n = input.size(0)
 
-            print(len(target))
             input = Variable(input, requires_grad=False).cuda()
             target = Variable(target, requires_grad=False).cuda()
 
