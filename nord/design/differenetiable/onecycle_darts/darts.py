@@ -27,12 +27,14 @@ def main(parser):
 
     args = parser.parse_args()
 
-    def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
+    def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr_scheduler):
         objs = utils.AvgrageMeter()
         top1 = utils.AvgrageMeter()
         top5 = utils.AvgrageMeter()
 
         for step, (input, target) in enumerate(train_queue):
+            lr = scheduler.get_lr()[0]
+            print('Step lr:', lr)
             model.train()
             n = input.size(0)
 
@@ -55,7 +57,7 @@ def main(parser):
             loss.backward()
             nn.utils.clip_grad_norm(model.parameters(), args.grad_clip)
             optimizer.step()
-
+            lr_scheduler.step()
             prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
             objs.update(loss.item(), n)
             top1.update(prec1.item(), n)
@@ -158,13 +160,14 @@ def main(parser):
     #     optimizer, float(args.epochs), eta_min=args.learning_rate_min)
 
     scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer,
-                                                    max_lr=args.learning_rate*50, steps_per_epoch=len(train_queue), epochs=float(args.epochs))
+                                                    max_lr=args.learning_rate*50, steps_per_epoch=len(train_queue), epochs=int(args.epochs))
 
     architect = Architect(model, args)
 
     for epoch in range(args.epochs):
         scheduler.step()
         lr = scheduler.get_lr()[0]
+        print('Currnet lr:', lr)
         logging.info('epoch %d lr %e', epoch, lr)
 
         genotype = model.genotype()
@@ -175,7 +178,7 @@ def main(parser):
 
         # training
         train_acc, train_obj = train(
-            train_queue, valid_queue, model, architect, criterion, optimizer, lr)
+            train_queue, valid_queue, model, architect, criterion, optimizer, scheduler)
         logging.info('train_acc %f', train_acc)
 
         # validation
