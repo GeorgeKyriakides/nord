@@ -27,9 +27,9 @@ from .architect import Architect
 CIFAR_CLASSES = 10
 
 
-def setup(rank, world_size):
-    os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '12355'
+def setup(rank, world_size, args):
+    os.environ['MASTER_ADDR'] = args.master_address
+    os.environ['MASTER_PORT'] = args.master_port
     os.environ['TORCH_DISTRIBUTED_DEBUG'] = 'DETAIL'
 
     # initialize the process group
@@ -48,7 +48,8 @@ def get_arch_params(model):
     return [p for name, p in model.named_parameters() if 'arch' in name]
 
 
-def main(rank, args, world_size):
+def main(local_rank, args, world_size):
+    rank = args.rank
 
     def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
         objs = utils.AvgrageMeter()
@@ -126,14 +127,14 @@ def main(rank, args, world_size):
         logging.info('no gpu device available')
         sys.exit(1)
 
-    setup(rank, world_size)
+    setup(rank, world_size, args)
 
     start_time = torch.Tensor([time.time()])
     dist.broadcast(start_time, 0)
     start_time = start_time.item()
     args.save = 'search-{}-{}'.format(args.save,
                                       time.strftime("%Y%m%d-%H%M%S", time.gmtime(start_time)))
-    if dist.get_rank() == 0:
+    if local_rank == 0:
         utils.create_exp_dir(args.save, scripts_to_save=glob.glob('*.py'))
 
     dist.barrier()
@@ -177,7 +178,7 @@ def main(rank, args, world_size):
     # train_data = dset.CIFAR10(
     #     root=args.data, train=True, download=True, transform=train_transform)
 
-    trainloader, testloader, _ = get_fashion_mnist(percentage=0.01)
+    trainloader, testloader, _ = get_fashion_mnist()
     train_data = trainloader.dataset
 
     num_train = len(train_data)
@@ -225,13 +226,13 @@ def main(rank, args, world_size):
         utils.save(model, os.path.join(args.save, 'weights.pt'))
 
 
-def run_demo(demo_fn, args, world_size):
+def run_demo(demo_fn, args, world_size, procs_number):
     mp.spawn(demo_fn,
              args=(args, world_size,),
-             nprocs=world_size,
+             nprocs=procs_number,
              join=True)
 
 
-def mymain(parser, n):
+def mymain(parser):
     args = parser.parse_args()
-    run_demo(main, args, n)
+    run_demo(main, args, args.world_size, torch.cuda.device_count())
