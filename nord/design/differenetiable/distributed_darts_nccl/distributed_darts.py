@@ -33,7 +33,7 @@ def setup(rank, world_size, args):
     os.environ['TORCH_DISTRIBUTED_DEBUG'] = 'DETAIL'
 
     # initialize the process group
-    dist.init_process_group("nccl", rank=rank, world_size=world_size)
+    dist.init_process_group(args.backend, rank=rank, world_size=world_size)
 
 
 def cleanup():
