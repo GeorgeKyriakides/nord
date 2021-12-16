@@ -160,7 +160,7 @@ def main(parser):
     #     optimizer, float(args.epochs), eta_min=args.learning_rate_min)
 
     scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer,
-                                                    max_lr=args.learning_rate*50, steps_per_epoch=len(train_queue), epochs=int(args.epochs))
+                                                    max_lr=args.learning_rate, steps_per_epoch=len(train_queue)+int(args.epochs), epochs=int(args.epochs))
 
     architect = Architect(model, args)
 
