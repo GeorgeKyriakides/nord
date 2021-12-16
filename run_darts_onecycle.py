@@ -9,7 +9,7 @@ parser.add_argument('--data', type=str, default='../data',
 parser.add_argument('--batch_size', type=int,
                     default=128, help='batch size')  # 64
 parser.add_argument('--learning_rate', type=float,
-                    default=0.025, help='init learning rate')
+                    default=2.0, help='init learning rate')
 parser.add_argument('--learning_rate_min', type=float,
                     default=0.001, help='min learning rate')
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
