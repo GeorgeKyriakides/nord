@@ -18,7 +18,7 @@ parser.add_argument('--weight_decay', type=float,
 parser.add_argument('--report_freq', type=float,
                     default=50, help='report frequency')
 parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
-parser.add_argument('--epochs', type=int, default=10,  # 50
+parser.add_argument('--epochs', type=int, default=5,  # 50
                     help='num of training epochs')
 parser.add_argument('--init_channels', type=int,
                     default=4, help='num of init channels')  # 8
