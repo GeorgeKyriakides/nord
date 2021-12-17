@@ -1,6 +1,6 @@
 from nord.design.differenetiable.distributed_darts.distributed_darts import mymain
 import argparse
-# nohup python run_darts_nccl.py --master_port 12355 --master_address 10.128.0.14  --world_size 2 --rank 0 --layers 6 --init_channels 12 > outs.txt 2>&1 &
+# nohup python run_darts_nccl.py --master_port 12355 --master_address 10.128.0.16  --world_size 2 --rank 0 --layers 6 --init_channels 12 --backend gloo > outs.txt 2>&1 &
 
 
 parser = argparse.ArgumentParser("cifar")

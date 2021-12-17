@@ -6,7 +6,7 @@ import argparse
 parser = argparse.ArgumentParser("cifar")
 parser.add_argument('--data', type=str, default='../data',
                     help='location of the data corpus')
-parser.add_argument('--batch_size', type=int, default=64, help='batch size')
+parser.add_argument('--batch_size', type=int, default=128, help='batch size')
 parser.add_argument('--learning_rate', type=float,
                     default=0.025, help='init learning rate')
 parser.add_argument('--learning_rate_min', type=float,
