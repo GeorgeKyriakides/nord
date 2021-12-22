@@ -148,6 +148,7 @@ class NeuralDescriptor(object):
         -------
         G : MultiDiGraph
         """
+        import networkx as nx
 
         G = nx.MultiDiGraph()
         for start in self.connections:

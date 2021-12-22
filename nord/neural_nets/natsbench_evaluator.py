@@ -1,7 +1,10 @@
 from numpy import random
 from copy import deepcopy
 from nats_bench import create
+import networkx as nx
+import traceback
 
+from numpy.lib.arraysetops import unique
 
 OPS = ["none", "skip_connect", "nor_conv_1x1", "nor_conv_3x3", "avg_pool_3x3"]
 
@@ -217,11 +220,175 @@ def random_topology_func(op_names, max_nodes=4):
     return random_architecture
 
 
+def descriptor_to_matrix(descriptor):
+
+    graph = nx.DiGraph()
+
+    for origin in descriptor.connections:
+        for destination in descriptor.connections[origin]:
+            graph.add_edge(origin, destination)
+
+    node_lvls = {}
+    first_node = min(list(descriptor.layers.keys()))
+    last_node = max(list(descriptor.layers.keys()))
+    nodes_no = len(list(descriptor.layers.keys()))
+
+    for node in list(descriptor.layers.keys()):
+        if node in (first_node, last_node):
+            continue
+        paths = nx.all_simple_paths(graph, source=node, target=last_node)
+        lengths = [len(p) for p in paths]
+        lengths.append(0)
+        node_lvl = nodes_no - max(lengths)
+        if node_lvl not in node_lvls:
+            node_lvls[node_lvl] = [node]
+        else:
+            node_lvls[node_lvl].append(node)
+
+    nodes_ordered = []
+    ops = []
+
+    first_lvl = -1
+    last_lvl = nodes_no + 1
+    try:
+        node_lvls[first_lvl] = [first_node]
+        node_lvls[last_lvl] = [last_node]
+
+        for node_lvl in sorted(node_lvls):
+            nodelist = node_lvls[node_lvl]
+            nodes_ordered.extend(nodelist)
+            for node in nodelist:
+                ops.append(descriptor.layers[node][0])
+
+        matrix = nx.linalg.adjacency_matrix(
+            graph, nodelist=nodes_ordered).todense().tolist()
+    except Exception:
+        print(nodes_ordered)
+        print(descriptor)
+        traceback.print_exc()
+        return None
+
+    return matrix, ops
+
+
+def add_node(descriptor, layer, node_no):
+
+    node_name = f'my_node_{node_no:03}'
+    incomings = deepcopy(descriptor.incoming_connections[layer])
+
+    descriptor.add_layer('NODE', None, node_name)
+
+    descriptor.connect_layers(node_name, layer)
+    for incoming_layer in incomings:
+        if 'node' not in incoming_layer:
+            descriptor.connect_layers(incoming_layer, node_name)
+            descriptor.disconnect_layers(incoming_layer, layer)
+
+    return descriptor, node_name
+
+
+def get_nasnet_edges(descriptor):
+
+    # Add a node before each layer
+    node_no = 0
+
+    descriptor = deepcopy(descriptor)
+    original_layers = list(descriptor.layers.keys())
+    first_layer = descriptor.first_layer
+    original_layers.remove(first_layer)
+
+    new_nodes = []
+    for layer in original_layers:
+        descriptor, new_node = add_node(descriptor, layer, node_no)
+        new_nodes.append(new_node)
+        node_no += 1
+
+    # Group nodes that receive the same input
+    # into a single node
+
+    groups = {}
+    original_layers.append(first_layer)
+    for layer in original_layers:
+        connections = descriptor.connections[layer]
+        if len(connections) > 0:
+            for c in connections:
+                groups[c] = connections[0]
+
+    # Create the OPS edges
+
+    edges = {}
+    for node in new_nodes:
+        incomings = descriptor.incoming_connections[node]
+        for incoming in incomings:
+            # incomings (old layers) to the new nodes ('my_node_XX')
+            # are replaced with their new nodes parents and the op is saved as the last
+            # element of the tuple
+            node_incoming = descriptor.incoming_connections[incoming]
+
+            if len(node_incoming) == 0:
+                continue
+            node_incoming = groups[node_incoming[0]]
+
+            if node_incoming in edges:
+                edges[node_incoming][groups[node]
+                                     ] = descriptor.layers[incoming]
+            else:
+                edges[node_incoming] = {
+                    groups[node]: descriptor.layers[incoming]}
+
+    return edges
+
+
+def descriptor_to_nasnet(descriptor):
+
+    edges = get_nasnet_edges(descriptor)
+    max_nodes = len(edges.keys())
+    genotypes = []
+    # needs max_nodes+1 as we have edges in outgoing format
+    # but we calculate genotypes with incoming format
+    for i in range(1, max_nodes+1):
+        xlist = []
+        for j in range(i):
+            node_str = "{:}<-{:}".format(i, j)
+            op_name = 'zeroize'
+            node_name = list(edges.keys())[j]
+            if f'my_node_{i:03}' in edges[node_name]:
+                op_name = edges[node_name][f'my_node_{i:03}'][0]
+            xlist.append((op_name, j))
+        genotypes.append(tuple(xlist))
+    return Structure(genotypes)
+
+
+descriptor = NeuralDescriptor()
+descriptor.add_layer('IN', None, 'IN')
+descriptor.add_layer_sequential('avg_pool_3x3', None, '1')
+descriptor.add_layer_sequential('nor_conv_1x1', None, '2')
+descriptor.add_layer_sequential('skip_connect', None, '3')
+descriptor.add_layer_sequential('OUT', None, 'OUT')
+
+descriptor.add_layer('avg_pool_3x3', None, '4')
+descriptor.connect_layers('1', '4')
+descriptor.connect_layers('4', 'OUT')
+
+descriptor.add_layer('nor_conv_3x3', None, '5')
+descriptor.connect_layers('IN', '5')
+descriptor.connect_layers('5', '3')
+
+
+descriptor.add_layer('nor_conv_3x3', None, '6')
+descriptor.connect_layers('IN', '6')
+descriptor.connect_layers('6', 'OUT')
+
+
 api = create('/home/george/Desktop/NATS-tss-v1_0-3ffb9-simple',
              'tss', fast_mode=True, verbose=True)
 
 arch = random_topology_func(OPS)()
 
+arch = descriptor_to_nasnet(descriptor)
 print('*'*30)
-print(api.query_by_arch(arch, '12'))
+print(api.query_by_arch(arch, '200'))
 print(arch)
+index = api.query_index_by_arch(arch)
+validation_accuracy, latency, time_cost, current_total_time_cost = api.simulate_train_eval(
+    index, dataset='cifar10', hp='200')
