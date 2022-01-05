@@ -30,7 +30,7 @@ class NATSBench_Evaluator:
             filepath + "/" + NATSBENCH_NAME, "tss", fast_mode=True, verbose=False
         )
 
-        def descriptor_evaluate(self, descriptor, metrics=["validation_accuracy", "time_cost"]):
+    def descriptor_evaluate(self, descriptor, metrics=["validation_accuracy", "time_cost"]):
 
             arch = NATSBench_Evaluator._descriptor_to_nasnet(descriptor)
             index = self.api.query_index_by_arch(arch)
