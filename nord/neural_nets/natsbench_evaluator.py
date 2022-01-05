@@ -30,25 +30,24 @@ class NATSBench_Evaluator:
             filepath + "/" + NATSBENCH_NAME, "tss", fast_mode=True, verbose=False
         )
 
-    def descriptor_evaluate(
-        self, descriptor, metrics=["validation_accuracy", "time_cost"]
-    ):
+        def descriptor_evaluate(self, descriptor, metrics=["validation_accuracy", "time_cost"]):
 
-        arch = NATSBench_Evaluator._descriptor_to_nasnet(descriptor)
-        index = self.api.query_index_by_arch(arch)
-        (
-            validation_accuracy,
-            latency,
-            time_cost,
-            current_total_time_cost,
-        ) = self.api.simulate_train_eval(index, dataset="cifar10", hp="200")
-        arch_metrics = {
-            "validation_accuracy": validation_accuracy,
-            "latency": latency,
-            "time_cost": time_cost,
-            "current_total_time_cost": current_total_time_cost,
-        }
-        return [arch_metrics[x] for x in metrics]
+            arch = NATSBench_Evaluator._descriptor_to_nasnet(descriptor)
+            index = self.api.query_index_by_arch(arch)
+
+            api_metrics = self.api.get_more_info(arch, dataset="cifar10-valid", hp="200")
+            latency = self.api.get_latency(index, dataset="cifar10-valid")
+            arch_metrics = {
+                "train_loss": api_metrics["train-loss"],
+                "validation_loss": api_metrics["valid-loss"],
+                "test_loss": api_metrics["test-loss"],
+                "train_accuracy": api_metrics["train-accuracy"],
+                "validation_accuracy": api_metrics["valid-accuracy"],
+                "test_accuracy": api_metrics["test-accuracy"],
+                "latency": latency,
+                "time_cost": api_metrics["train-all-time"] + api_metrics["valid-per-time"],
+            }
+            return [arch_metrics[x] for x in metrics]
 
     @staticmethod
     def _add_node(descriptor, layer, node_no):
