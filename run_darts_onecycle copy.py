@@ -3,7 +3,7 @@
 from nord.design.differenetiable.onecycle_darts.darts_lr_check import main
 import argparse
 
-# nohup python -u run_darts_onecycle_copy.py --batch_size 1024 --layers 6 --init_channels 12 > outs.txt 2>&1 &
+# nohup python -u 'run_darts_onecycle copy.py' --batch_size 256 --layers 6 --init_channels 12 > outs.txt 2>&1 &
 
 parser = argparse.ArgumentParser("cifar")
 parser.add_argument(

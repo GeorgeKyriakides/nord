@@ -62,7 +62,7 @@ class CLR:
         with open("lr_exports.csv", "w") as f:
             f.write("LR, LOSS\n")
             for i in range(len(self.lrs)):
-                f.write(str(self.lrs[i] + ", " + str(self.losses[i] + "\n")))
+                f.write(str(self.lrs[i]) + ", " + str(self.losses[i]) + "\n")
 
 
 def main(parser):
