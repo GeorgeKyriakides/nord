@@ -212,6 +212,9 @@ class NATSBench_Evaluator:
     def __init__(self, filepath=None) -> None:
         if filepath is None:
             filepath = NATSBENCH_TFRECORD
+        if not os.path.isdir(DATA_ROOT):
+            os.mkdir(DATA_ROOT)
+
         if not os.path.isdir(filepath):
             print("Downloading NATSBench Data.")
             download_file_from_google_drive(file_id, filepath + ".tar")
@@ -228,17 +231,18 @@ class NATSBench_Evaluator:
 
         arch = NATSBench_Evaluator._descriptor_to_nasnet(descriptor)
         index = self.api.query_index_by_arch(arch)
-        (
-            validation_accuracy,
-            latency,
-            time_cost,
-            current_total_time_cost,
-        ) = self.api.simulate_train_eval(index, dataset="cifar10", hp="200")
+
+        api_metrics = self.api.get_more_info(arch, dataset="cifar10-valid", hp="200")
+        latency = self.api.get_latency(index, dataset="cifar10-valid")
         arch_metrics = {
-            "validation_accuracy": validation_accuracy,
+            "train_loss": api_metrics["train-loss"],
+            "validation_loss": api_metrics["valid-loss"],
+            "test_loss": api_metrics["test-loss"],
+            "train_accuracy": api_metrics["train-accuracy"],
+            "validation_accuracy": api_metrics["valid-accuracy"],
+            "test_accuracy": api_metrics["test-accuracy"],
             "latency": latency,
-            "time_cost": time_cost,
-            "current_total_time_cost": current_total_time_cost,
+            "time_cost": api_metrics["train-all-time"] + api_metrics["valid-per-time"],
         }
         return [arch_metrics[x] for x in metrics]
 
@@ -311,21 +315,21 @@ class NATSBench_Evaluator:
         return edges
 
     @staticmethod
-    def _descriptor_to_nasnet(descriptor):
+    def _descriptor_to_nasnet(descriptor, max_nodes=4):
 
         edges = NATSBench_Evaluator._get_nasnet_edges(descriptor)
-        max_nodes = len(edges.keys())
+        if len(edges.keys()) + 1 > max_nodes:
+            max_nodes = len(edges.keys()) + 1
         genotypes = []
-        # needs max_nodes+1 as we have edges in outgoing format
-        # but we calculate genotypes with incoming format
-        for i in range(1, max_nodes + 1):
+        for i in range(1, max_nodes):
             xlist = []
             for j in range(i):
                 # node_str = "{:}<-{:}".format(i, j)
-                op_name = "zeroize"
-                node_name = list(edges.keys())[j]
-                if f"my_node_{i:03}" in edges[node_name]:
-                    op_name = edges[node_name][f"my_node_{i:03}"][0]
+                op_name = "none"
+                if len(list(edges.keys())) > j:
+                    node_name = list(edges.keys())[j]
+                    if f"my_node_{i:03}" in edges[node_name]:
+                        op_name = edges[node_name][f"my_node_{i:03}"][0]
                 xlist.append((op_name, j))
             genotypes.append(tuple(xlist))
         return Structure(genotypes)
@@ -348,35 +352,40 @@ def random_topology_func(op_names, max_nodes=4):
 
 
 # descriptor = NeuralDescriptor()
-# descriptor.add_layer('IN', None, 'IN')
-# descriptor.add_layer_sequential('avg_pool_3x3', None, '1')
-# descriptor.add_layer_sequential('nor_conv_1x1', None, '2')
-# descriptor.add_layer_sequential('skip_connect', None, '3')
-# descriptor.add_layer_sequential('OUT', None, 'OUT')
+# descriptor.add_layer("IN", None, "IN")
+# descriptor.add_layer_sequential("avg_pool_3x3", None, "1")
+# descriptor.add_layer_sequential("nor_conv_1x1", None, "2")
+# descriptor.add_layer_sequential("skip_connect", None, "3")
+# descriptor.add_layer_sequential("OUT", None, "OUT")
 
-# descriptor.add_layer('avg_pool_3x3', None, '4')
-# descriptor.connect_layers('1', '4')
-# descriptor.connect_layers('4', 'OUT')
+# descriptor.add_layer("avg_pool_3x3", None, "4")
+# descriptor.connect_layers("1", "4")
+# descriptor.connect_layers("4", "OUT")
 
-# descriptor.add_layer('nor_conv_3x3', None, '5')
-# descriptor.connect_layers('IN', '5')
-# descriptor.connect_layers('5', '3')
-
-
-# descriptor.add_layer('nor_conv_3x3', None, '6')
-# descriptor.connect_layers('IN', '6')
-# descriptor.connect_layers('6', 'OUT')
+# descriptor.add_layer("nor_conv_3x3", None, "5")
+# descriptor.connect_layers("IN", "5")
+# descriptor.connect_layers("5", "3")
 
 
-# api = create('/home/george/Desktop/NATS-tss-v1_0-3ffb9-simple',
-#              'tss', fast_mode=True, verbose=True)
+# descriptor.add_layer("nor_conv_3x3", None, "6")
+# descriptor.connect_layers("IN", "6")
+# descriptor.connect_layers("6", "OUT")
 
-# arch = random_topology_func(OPS)()
 
-# arch = descriptor_to_nasnet(descriptor)
-# print('*'*30)
-# print(api.query_by_arch(arch, '200'))
-# print(arch)
+# api = create(
+#     NATSBENCH_TFRECORD + "/" + NATSBENCH_NAME, "tss", fast_mode=True, verbose=True
+# )
+
+# # arch = random_topology_func(OPS)()
+
+# arch = NATSBench_Evaluator._descriptor_to_nasnet(descriptor)
+# # print('*'*30)
+# print(api.query_by_arch(arch, "200"))
+# # print(arch)
 # index = api.query_index_by_arch(arch)
-# validation_accuracy, latency, time_cost, current_total_time_cost = api.simulate_train_eval(
-#     index, dataset='cifar10', hp='200')
+# (
+#     validation_accuracy,
+#     latency,
+#     time_cost,
+#     current_total_time_cost,
+# ) = api.simulate_train_eval(index, dataset="cifar10", hp="200")
