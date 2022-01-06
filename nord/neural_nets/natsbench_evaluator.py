@@ -318,6 +318,8 @@ class NATSBench_Evaluator:
     def _descriptor_to_nasnet(descriptor, max_nodes=4):
 
         edges = NATSBench_Evaluator._get_nasnet_edges(descriptor)
+        if len(edges.keys()) + 1 > max_nodes:
+            max_nodes = len(edges.keys()) + 1
         genotypes = []
         for i in range(1, max_nodes):
             xlist = []
