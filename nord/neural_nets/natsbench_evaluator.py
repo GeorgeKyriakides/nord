@@ -14,133 +14,6 @@ file_id = "17_saCsj_krKjlCBLOJEpNtzPXArMCqxU"
 OPS = ["none", "skip_connect", "nor_conv_1x1", "nor_conv_3x3", "avg_pool_3x3"]
 
 
-class NATSBench_Evaluator:
-    def __init__(self, filepath=None) -> None:
-        if filepath is None:
-            filepath = NATSBENCH_TFRECORD
-        if not os.path.isdir(DATA_ROOT):
-            os.mkdir(DATA_ROOT)
-
-        if not os.path.isdir(filepath):
-            print("Downloading NATSBench Data.")
-            download_file_from_google_drive(file_id, filepath + ".tar")
-            print("Downloaded, extracting.")
-            untar_file(filepath + ".tar", DATA_ROOT)
-
-        self.api = create(
-            filepath + "/" + NATSBENCH_NAME, "tss", fast_mode=True, verbose=False
-        )
-
-    def descriptor_evaluate(
-        self, descriptor, metrics=["validation_accuracy", "time_cost"]
-    ):
-
-        arch = NATSBench_Evaluator._descriptor_to_nasnet(descriptor)
-        index = self.api.query_index_by_arch(arch)
-
-        api_metrics = self.api.get_more_info(arch, dataset="cifar10-valid", hp="200")
-        latency = self.api.get_latency(index, dataset="cifar10-valid")
-        arch_metrics = {
-            "train_loss": api_metrics["train-loss"],
-            "validation_loss": api_metrics["valid-loss"],
-            "test_loss": api_metrics["test-loss"],
-            "train_accuracy": api_metrics["train-accuracy"],
-            "validation_accuracy": api_metrics["valid-accuracy"],
-            "test_accuracy": api_metrics["test-accuracy"],
-            "latency": latency,
-            "time_cost": api_metrics["train-all-time"] + api_metrics["valid-per-time"],
-        }
-        return [arch_metrics[x] for x in metrics]
-
-    @staticmethod
-    def _add_node(descriptor, layer, node_no):
-
-        node_name = f"my_node_{node_no:03}"
-        incomings = deepcopy(descriptor.incoming_connections[layer])
-
-        descriptor.add_layer("NODE", None, node_name)
-
-        descriptor.connect_layers(node_name, layer)
-        for incoming_layer in incomings:
-            if "node" not in incoming_layer:
-                descriptor.connect_layers(incoming_layer, node_name)
-                descriptor.disconnect_layers(incoming_layer, layer)
-
-        return descriptor, node_name
-
-    @staticmethod
-    def _get_nasnet_edges(descriptor):
-
-        # Add a node before each layer
-        node_no = 0
-
-        descriptor = deepcopy(descriptor)
-        original_layers = list(descriptor.layers.keys())
-        first_layer = descriptor.first_layer
-        original_layers.remove(first_layer)
-
-        new_nodes = []
-        for layer in original_layers:
-            descriptor, new_node = NATSBench_Evaluator._add_node(
-                descriptor, layer, node_no
-            )
-            new_nodes.append(new_node)
-            node_no += 1
-
-        # Group nodes that receive the same input
-        # into a single node
-
-        groups = {}
-        original_layers.append(first_layer)
-        for layer in original_layers:
-            connections = descriptor.connections[layer]
-            if len(connections) > 0:
-                for c in connections:
-                    groups[c] = connections[0]
-
-        # Create the OPS edges
-
-        edges = {}
-        for node in new_nodes:
-            incomings = descriptor.incoming_connections[node]
-            for incoming in incomings:
-                # incomings (old layers) to the new nodes ('my_node_XX')
-                # are replaced with their new nodes parents and the op is saved as the last
-                # element of the tuple
-                node_incoming = descriptor.incoming_connections[incoming]
-
-                if len(node_incoming) == 0:
-                    continue
-                node_incoming = groups[node_incoming[0]]
-
-                if node_incoming in edges:
-                    edges[node_incoming][groups[node]] = descriptor.layers[incoming]
-                else:
-                    edges[node_incoming] = {groups[node]: descriptor.layers[incoming]}
-
-        return edges
-
-    @staticmethod
-    def _descriptor_to_nasnet(descriptor):
-
-        edges = NATSBench_Evaluator._get_nasnet_edges(descriptor)
-        max_nodes = len(edges.keys())
-        genotypes = []
-        # needs max_nodes+1 as we have edges in outgoing format
-        # but we calculate genotypes with incoming format
-        for i in range(1, max_nodes + 1):
-            xlist = []
-            for j in range(i):
-                # node_str = "{:}<-{:}".format(i, j)
-                op_name = "none"
-                node_name = list(edges.keys())[j]
-                if f"my_node_{i:03}" in edges[node_name]:
-                    op_name = edges[node_name][f"my_node_{i:03}"][0]
-                xlist.append((op_name, j))
-            genotypes.append(tuple(xlist))
-        return Structure(genotypes)
-
-
 def get_combination(space, num):
     combs = []
     for i in range(num):
@@ -333,6 +206,131 @@ class Structure:
             return all_archs
         else:
             return [Structure(x) for x in all_archs]
+
+
+class NATSBench_Evaluator:
+    def __init__(self, filepath=None) -> None:
+        if filepath is None:
+            filepath = NATSBENCH_TFRECORD
+        if not os.path.isdir(DATA_ROOT):
+            os.mkdir(DATA_ROOT)
+
+        if not os.path.isdir(filepath):
+            print("Downloading NATSBench Data.")
+            download_file_from_google_drive(file_id, filepath + ".tar")
+            print("Downloaded, extracting.")
+            untar_file(filepath + ".tar", DATA_ROOT)
+
+        self.api = create(
+            filepath + "/" + NATSBENCH_NAME, "tss", fast_mode=True, verbose=False
+        )
+
+    def descriptor_evaluate(
+        self, descriptor, metrics=["validation_accuracy", "time_cost"]
+    ):
+
+        arch = NATSBench_Evaluator._descriptor_to_nasnet(descriptor)
+        index = self.api.query_index_by_arch(arch)
+
+        api_metrics = self.api.get_more_info(arch, dataset="cifar10-valid", hp="200")
+        latency = self.api.get_latency(index, dataset="cifar10-valid")
+        arch_metrics = {
+            "train_loss": api_metrics["train-loss"],
+            "validation_loss": api_metrics["valid-loss"],
+            "test_loss": api_metrics["test-loss"],
+            "train_accuracy": api_metrics["train-accuracy"],
+            "validation_accuracy": api_metrics["valid-accuracy"],
+            "test_accuracy": api_metrics["test-accuracy"],
+            "latency": latency,
+            "time_cost": api_metrics["train-all-time"] + api_metrics["valid-per-time"],
+        }
+        return [arch_metrics[x] for x in metrics]
+
+    @staticmethod
+    def _add_node(descriptor, layer, node_no):
+
+        node_name = f"my_node_{node_no:03}"
+        incomings = deepcopy(descriptor.incoming_connections[layer])
+
+        descriptor.add_layer("NODE", None, node_name)
+
+        descriptor.connect_layers(node_name, layer)
+        for incoming_layer in incomings:
+            if "node" not in incoming_layer:
+                descriptor.connect_layers(incoming_layer, node_name)
+                descriptor.disconnect_layers(incoming_layer, layer)
+
+        return descriptor, node_name
+
+    @staticmethod
+    def _get_nasnet_edges(descriptor):
+
+        # Add a node before each layer
+        node_no = 0
+
+        descriptor = deepcopy(descriptor)
+        original_layers = list(descriptor.layers.keys())
+        first_layer = descriptor.first_layer
+        original_layers.remove(first_layer)
+
+        new_nodes = []
+        for layer in original_layers:
+            descriptor, new_node = NATSBench_Evaluator._add_node(
+                descriptor, layer, node_no
+            )
+            new_nodes.append(new_node)
+            node_no += 1
+
+        # Group nodes that receive the same input
+        # into a single node
+
+        groups = {}
+        original_layers.append(first_layer)
+        for layer in original_layers:
+            connections = descriptor.connections[layer]
+            if len(connections) > 0:
+                for c in connections:
+                    groups[c] = connections[0]
+
+        # Create the OPS edges
+
+        edges = {}
+        for node in new_nodes:
+            incomings = descriptor.incoming_connections[node]
+            for incoming in incomings:
+                # incomings (old layers) to the new nodes ('my_node_XX')
+                # are replaced with their new nodes parents and the op is saved as the last
+                # element of the tuple
+                node_incoming = descriptor.incoming_connections[incoming]
+
+                if len(node_incoming) == 0:
+                    continue
+                node_incoming = groups[node_incoming[0]]
+
+                if node_incoming in edges:
+                    edges[node_incoming][groups[node]] = descriptor.layers[incoming]
+                else:
+                    edges[node_incoming] = {groups[node]: descriptor.layers[incoming]}
+
+        return edges
+
+    @staticmethod
+    def _descriptor_to_nasnet(descriptor, max_nodes=4):
+
+        edges = NATSBench_Evaluator._get_nasnet_edges(descriptor)
+        genotypes = []
+        for i in range(1, max_nodes):
+            xlist = []
+            for j in range(i):
+                # node_str = "{:}<-{:}".format(i, j)
+                op_name = "none"
+                if len(list(edges.keys())) > j:
+                    node_name = list(edges.keys())[j]
+                    if f"my_node_{i:03}" in edges[node_name]:
+                        op_name = edges[node_name][f"my_node_{i:03}"][0]
+                xlist.append((op_name, j))
+            genotypes.append(tuple(xlist))
+        return Structure(genotypes)
 
 
 def random_topology_func(op_names, max_nodes=4):
