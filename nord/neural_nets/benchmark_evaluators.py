@@ -1,23 +1,27 @@
 import os
 import traceback
+import warnings
 
 import networkx as nx
-from nasbench import api
-from nord.utils import pdownload
+from nord.utils import extract_params, pdownload
 
-NASBENCH_TFRECORD = './data/nasbench_only108.tfrecord'
-file_url = 'https://storage.googleapis.com/nasbench/nasbench_only108.tfrecord'
+try:
+    from nasbench import api
+except Exception:
+    warnings.warn("nasbench-101 not found")
+NASBENCH_TFRECORD = "./data/nasbench_only108.tfrecord"
+file_url = "https://storage.googleapis.com/nasbench/nasbench_only108.tfrecord"
 
-INPUT = 'input'
-OUTPUT = 'output'
-CONV1X1 = 'conv1x1-bn-relu'
-CONV3X3 = 'conv3x3-bn-relu'
-MAXPOOL3X3 = 'maxpool3x3'
+INPUT = "input"
+OUTPUT = "output"
+CONV1X1 = "conv1x1-bn-relu"
+CONV3X3 = "conv3x3-bn-relu"
+MAXPOOL3X3 = "maxpool3x3"
 
 
-class BenchmarkEvaluator():
+class BenchmarkEvaluator:
     """A class to evaluate a network on a benchmark
-       NAS dataset.
+    NAS dataset.
     """
 
     def get_available_ops(self) -> list:
@@ -25,9 +29,9 @@ class BenchmarkEvaluator():
 
     def __init__(self):
         if not os.path.isfile(NASBENCH_TFRECORD):
-            print('Downloading NASBench-101 Data.')
+            print("Downloading NASBench-101 Data.")
             pdownload(file_url, NASBENCH_TFRECORD)
-            print('Downloaded')
+            print("Downloaded")
 
         self.dataset = api.NASBench(NASBENCH_TFRECORD)
         self.checked_models = {}
@@ -40,12 +44,13 @@ class BenchmarkEvaluator():
                 # Adjacency matrix of the module
                 matrix=matrix,
                 # Operations at the vertices of the module, matches order of matrix
-                ops=ops)
+                ops=ops,
+            )
         except Exception:
             print(matrix)
             print(ops)
             print(descriptor)
-            input('PROLBEM')
+            input("PROLBEM")
             traceback.print_exc()
             return None
 
@@ -55,13 +60,13 @@ class BenchmarkEvaluator():
         model_spec = self.__descriptor_to_spec(descriptor)
         return model_spec in self.checked_models
 
-    def descriptor_evaluate(self, descriptor, acc='validation_accuracy'):
+    def descriptor_evaluate(self, descriptor, acc="validation_accuracy"):
 
         model_spec = self.__descriptor_to_spec(descriptor)
         data = 0, 0
         try:
 
-            hash_ = model_spec.hash_spec(self.dataset.config['available_ops'])
+            hash_ = model_spec.hash_spec(self.dataset.config["available_ops"])
             if hash_ in self.checked_models:
                 data = self.checked_models[hash_]
             else:
@@ -70,7 +75,7 @@ class BenchmarkEvaluator():
         except:
             traceback.print_exc()
             return 0, 0
-        return data[acc], data['training_time']
+        return data[acc], data["training_time"]
 
     @staticmethod
     def descriptor_to_matrix(descriptor):
@@ -113,8 +118,11 @@ class BenchmarkEvaluator():
                 for node in nodelist:
                     ops.append(descriptor.layers[node][0])
 
-            matrix = nx.linalg.adjacency_matrix(
-                graph, nodelist=nodes_ordered).todense().tolist()
+            matrix = (
+                nx.linalg.adjacency_matrix(graph, nodelist=nodes_ordered)
+                .todense()
+                .tolist()
+            )
         except Exception:
             print(nodes_ordered)
             print(descriptor)

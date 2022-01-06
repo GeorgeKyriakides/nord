@@ -14,12 +14,13 @@ file_id = "17_saCsj_krKjlCBLOJEpNtzPXArMCqxU"
 OPS = ["none", "skip_connect", "nor_conv_1x1", "nor_conv_3x3", "avg_pool_3x3"]
 
 
-
-
 class NATSBench_Evaluator:
     def __init__(self, filepath=None) -> None:
         if filepath is None:
             filepath = NATSBENCH_TFRECORD
+        if not os.path.isdir(DATA_ROOT):
+            os.mkdir(DATA_ROOT)
+
         if not os.path.isdir(filepath):
             print("Downloading NATSBench Data.")
             download_file_from_google_drive(file_id, filepath + ".tar")
@@ -30,7 +31,9 @@ class NATSBench_Evaluator:
             filepath + "/" + NATSBENCH_NAME, "tss", fast_mode=True, verbose=False
         )
 
-    def descriptor_evaluate(self, descriptor, metrics=["validation_accuracy", "time_cost"]):
+    def descriptor_evaluate(
+        self, descriptor, metrics=["validation_accuracy", "time_cost"]
+    ):
 
         arch = NATSBench_Evaluator._descriptor_to_nasnet(descriptor)
         index = self.api.query_index_by_arch(arch)
@@ -137,6 +140,7 @@ class NATSBench_Evaluator:
             genotypes.append(tuple(xlist))
         return Structure(genotypes)
 
+
 def get_combination(space, num):
     combs = []
     for i in range(num):
@@ -151,6 +155,7 @@ def get_combination(space, num):
                     new_combs.append(xstring)
             combs = new_combs
     return combs
+
 
 class Structure:
     def __init__(self, genotype):
@@ -328,7 +333,6 @@ class Structure:
             return all_archs
         else:
             return [Structure(x) for x in all_archs]
-
 
 
 def random_topology_func(op_names, max_nodes=4):
