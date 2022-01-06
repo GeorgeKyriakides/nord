@@ -132,7 +132,7 @@ class NATSBench_Evaluator:
             xlist = []
             for j in range(i):
                 # node_str = "{:}<-{:}".format(i, j)
-                op_name = "zeroize"
+                op_name = "none"
                 node_name = list(edges.keys())[j]
                 if f"my_node_{i:03}" in edges[node_name]:
                     op_name = edges[node_name][f"my_node_{i:03}"][0]
