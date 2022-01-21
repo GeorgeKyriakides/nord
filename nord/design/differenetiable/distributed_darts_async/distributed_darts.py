@@ -250,9 +250,9 @@ def reduce_parameters(model):
             dist.all_reduce(arch_p, op=dist.ReduceOp.SUM, async_op=True)
 
         for param in model.parameters():
-            param /= size
+            param.data /= size
         for arch_p in model.arch_parameters():
-            arch_p /= size
+            arch_p.data /= size
     dist.barrier()
 
 
