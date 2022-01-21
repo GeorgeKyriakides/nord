@@ -3,7 +3,7 @@
 from nord.design.differenetiable.onecycle_darts.darts import main
 import argparse
 
-# nohup python -u run_darts_onecycle.py --batch_size 1024 --layers 6 --init_channels 12 > outs.txt 2>&1 &
+# nohup python -u run_darts_onecycle.py --batch_size 256 --layers 6 --init_channels 12 --arch_learning_rate 3e-1 > outs.txt 2>&1 &
 parser = argparse.ArgumentParser("cifar")
 parser.add_argument(
     "--data", type=str, default="../data", help="location of the data corpus"

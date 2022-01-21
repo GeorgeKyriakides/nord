@@ -25,3 +25,13 @@ descriptor.add_layer_sequential("OUT", None, "OUT")
 ne.descriptor_evaluate(descriptor)
 
 ne.api.query_index_by_arch(ne._descriptor_to_nasnet(descriptor))
+
+
+for k in descriptor.connections.keys():
+    outs = descriptor.connections[k]
+    for out in outs:
+        if out not in descriptor.incoming_connections:
+            descriptor.incoming_connections[out] = []
+        incs = descriptor.incoming_connections[out]
+        incs.append(k)
+        descriptor.incoming_connections[out] = incs
