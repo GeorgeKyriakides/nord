@@ -242,16 +242,17 @@ def main(local_rank, args, world_size):
 
 
 def reduce_parameters(model):
-    size = float(dist.get_world_size())
-    for param in model.parameters():
-        dist.all_reduce(param, op=dist.ReduceOp.SUM, async_op=True)
-    for arch_p in model.arch_parameters():
-        dist.all_reduce(arch_p, op=dist.ReduceOp.SUM, async_op=True)
+    with torch.no_grad():
+        size = float(dist.get_world_size())
+        for param in model.parameters():
+            dist.all_reduce(param, op=dist.ReduceOp.SUM, async_op=True)
+        for arch_p in model.arch_parameters():
+            dist.all_reduce(arch_p, op=dist.ReduceOp.SUM, async_op=True)
 
-    for param in model.parameters():
-        param /= size
-    for arch_p in model.arch_parameters():
-        arch_p /= size
+        for param in model.parameters():
+            param /= size
+        for arch_p in model.arch_parameters():
+            arch_p /= size
     dist.barrier()
 
 
