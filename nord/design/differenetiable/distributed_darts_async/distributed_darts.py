@@ -228,9 +228,9 @@ def main(local_rank, args, world_size):
         print(F.softmax(model.arch_alphas_reduce, dim=-1))
 
         # training
-        train_acc, train_obj = train(
-            train_queue, valid_queue, model, architect, criterion, optimizer, lr)
-        logging.info('train_acc %f', train_acc)
+        # train_acc, train_obj = train(
+        #     train_queue, valid_queue, model, architect, criterion, optimizer, lr)
+        # logging.info('train_acc %f', train_acc)
 
         reduce_parameters(model)
 
@@ -253,6 +253,7 @@ def reduce_parameters(model):
             param.data /= size
         for arch_p in model.arch_parameters():
             arch_p.data /= size
+
     dist.barrier()
 
 
