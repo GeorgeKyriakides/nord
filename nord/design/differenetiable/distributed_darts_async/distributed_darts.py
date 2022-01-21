@@ -254,7 +254,7 @@ def reduce_parameters(model):
         for arch_p in model.arch_parameters():
             arch_p.data /= size
 
-    dist.barrier()
+    # dist.barrier()
 
 
 def run_demo(demo_fn, args, world_size, procs_number):
