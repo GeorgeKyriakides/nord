@@ -1,7 +1,6 @@
 from nord.design.differenetiable.distributed_darts_async.distributed_darts import mymain
 import argparse
 
-# nohup python -u run_darts_async.py --master_port 12355 --master_address 127.0.0.1  --world_size 1 --batch_size 32 --rank 0 --layers 4 --init_channels 8 --backend gloo
 
 parser = argparse.ArgumentParser("cifar")
 parser.add_argument('--data', type=str, default='../data',

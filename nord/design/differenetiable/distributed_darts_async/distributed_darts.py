@@ -232,13 +232,27 @@ def main(local_rank, args, world_size):
             train_queue, valid_queue, model, architect, criterion, optimizer, lr)
         logging.info('train_acc %f', train_acc)
 
-        dist.all_reduce(model.parameters)
-        dist.all_reduce(model.arch_parameters)
+        reduce_parameters(model)
+
         # validation
         valid_acc, valid_obj = infer(valid_queue, model, criterion)
         logging.info('valid_acc %f', valid_acc)
 
         utils.save(model, os.path.join(args.save, 'weights.pt'))
+
+
+def reduce_parameters(model):
+    size = float(dist.get_world_size())
+    for param in model.parameters():
+        dist.all_reduce(param, op=dist.ReduceOp.SUM, async_op=True)
+    for arch_p in model.arch_parameters():
+        dist.all_reduce(arch_p, op=dist.ReduceOp.SUM, async_op=True)
+
+    for param in model.parameters():
+        param /= size
+    for arch_p in model.arch_parameters():
+        arch_p /= size
+    dist.barrier()
 
 
 def run_demo(demo_fn, args, world_size, procs_number):
