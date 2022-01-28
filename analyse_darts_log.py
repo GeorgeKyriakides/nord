@@ -1,5 +1,7 @@
-from nord.neural_nets.differentiable.genotypes import Genotype
+import matplotlib.pyplot as plt
 from graphviz import Digraph
+
+from nord.neural_nets.differentiable.genotypes import Genotype
 
 
 def plot(genotype, filename):
@@ -68,16 +70,36 @@ def get_genotypes(file_name):
     return new_list
 
 
-new_list = get_accuracies('valid_acc', './log_2a100.txt')
+acc = 'valid_acc'
+new_list = get_accuracies(acc, './log_2a100.txt')
 two_gpus = []
 
 for x in range(0, 100, 2):
     two_gpus.append((new_list[x]+new_list[x+1])/2)
 
-new_list = get_accuracies('valid_acc', './log.txt')
+new_list = get_accuracies(acc, './log.txt')
 plt.plot(two_gpus, label='two_gpus')
 plt.plot(new_list, label='one_gpu')
 plt.ylim([80, 99])
+plt.legend()
+
+
+# FULL TRAIN SINGLE GPU
+new_list = get_accuracies('train_acc', './log_1a100_train.txt')
+plt.plot(new_list, label='train')
+new_list = get_accuracies(acc, './log_1a100_train.txt')
+plt.plot(new_list, label='valid')
+plt.ylim([80, 99])
+plt.legend()
+
+
+# FULL TRAIN TWO GPU
+new_list = get_accuracies('valid_acc', './log_1a100_train.txt')
+plt.plot(new_list, label='one gpu')
+new_list = get_accuracies('valid_acc', './log_2a100_train.txt')
+plt.plot(new_list, label='two gpu')
+plt.ylim([80, 99])
+plt.xlim([0, 50])
 plt.legend()
 
 new_genotypes = get_genotypes('./log_2a100.txt')
