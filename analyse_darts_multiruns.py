@@ -91,11 +91,15 @@ def get_total_time(file_name):
 
 def get_single_gpu_distributions(acc, linestyle, label):
     metrics = []
+    avg_time = 0
     for i in range(1, 6):
         list = get_accuracies(acc, f'./logs/log_1a100_{i}.txt')
         metrics.append(list)
         time = get_total_time(f'./logs/log_1a100_{i}.txt')
+        avg_time += time
         plt.plot(list, label=f'{label}_{i} ', linestyle=linestyle)
+    avg_time /= 5
+    print(f'Single gpu times: {avg_time}')
     plt.ylim([80, 99])
     plt.legend()
     return metrics
@@ -103,18 +107,21 @@ def get_single_gpu_distributions(acc, linestyle, label):
 
 def get_multi_gpu_distributions(acc, linestyle, label, gpus):
     metrics = []
+    avg_time = 0
     for i in range(1, 2):
         list = get_accuracies(acc, f'./logs/log_{gpus}a100_async_{i}.txt')
         time = get_total_time(f'./logs/log_{gpus}a100_async_{i}.txt')
+        avg_time += time
         list2 = []
         for i in range(0, len(list), gpus):
             avg = 0
             for j in range(gpus):
                 avg += list[i+j]
-            avg /= gpus
             list2.append(avg)
         plt.plot(list2, label=f'{label}_{i} {time} secs', linestyle=linestyle)
         metrics.append(list2)
+    avg_time /= gpus
+    print(f'Multi gpu times: {avg_time}')
     plt.ylim([80, 99])
     plt.legend()
     return metrics
@@ -122,9 +129,11 @@ def get_multi_gpu_distributions(acc, linestyle, label, gpus):
 
 def get_multi_gpu_distributions2(acc, linestyle, label, gpus):
     metrics = []
+    avg_time = 0
     for i in range(1, 2):
         list = get_accuracies(acc, f'./logs/log_{gpus}a100_async_{i}.txt')
         time = get_total_time(f'./logs/log_{gpus}a100_async_{i}.txt')
+        avg_time += time
         list2 = []
         for j in range(gpus):
             list2.append([])
@@ -132,7 +141,7 @@ def get_multi_gpu_distributions2(acc, linestyle, label, gpus):
                 list2[j].append(list[i])
             plt.plot(
                 list2[j], label=f'{label}_{j} ', linestyle=linestyle)
-
+    print(f'Multi gpu times: {avg_time}')
     plt.ylim([80, 99])
     plt.legend()
     return list2
