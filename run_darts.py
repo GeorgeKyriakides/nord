@@ -4,6 +4,8 @@ from nord.design.differenetiable.darts.darts import main
 import argparse
 
 # nohup python -u run_darts_nccl.py --master_port 12355 --master_address 127.0.0.1  --world_size 1 --rank 0 --batch_size 64 --layers 8 --init_channels 16 > outs.txt 2>&1 &
+
+# nohup python -u run_darts.py  --batch_size 64 --layers 8 --init_channels 16 --seed 1337 > outs.txt 2>&1 &
 parser = argparse.ArgumentParser("cifar")
 parser.add_argument(
     "--data", type=str, default="../data", help="location of the data corpus"
@@ -25,9 +27,9 @@ parser.add_argument(
     "--epochs", type=int, default=5, help="num of training epochs"  # 50
 )
 parser.add_argument(
-    "--init_channels", type=int, default=4, help="num of init channels"
+    "--init_channels", type=int, default=6, help="num of init channels"
 )  # 8
-parser.add_argument("--layers", type=int, default=4,
+parser.add_argument("--layers", type=int, default=12,
                     help="total number of layers")
 parser.add_argument(
     "--model_path", type=str, default="saved_models", help="path to save the model"
@@ -49,7 +51,7 @@ parser.add_argument(
 parser.add_argument(
     "--unrolled",
     action="store_true",
-    default=True,
+    default=False,
     help="use one-step unrolled validation loss",
 )
 parser.add_argument(

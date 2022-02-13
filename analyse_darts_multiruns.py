@@ -92,10 +92,10 @@ def get_total_time(file_name):
 def get_single_gpu_distributions(acc, linestyle, label):
     metrics = []
     for i in range(1, 6):
-        list = get_accuracies(acc, f'./log_1a100_{i}.txt')
+        list = get_accuracies(acc, f'./logs/log_1a100_{i}.txt')
         metrics.append(list)
-        time = get_total_time(f'./log_1a100_{i}.txt')
-        plt.plot(list, label=f'{label}_{i} {time} secs', linestyle=linestyle)
+        time = get_total_time(f'./logs/log_1a100_{i}.txt')
+        plt.plot(list, label=f'{label}_{i} ', linestyle=linestyle)
     plt.ylim([80, 99])
     plt.legend()
     return metrics
@@ -104,8 +104,8 @@ def get_single_gpu_distributions(acc, linestyle, label):
 def get_multi_gpu_distributions(acc, linestyle, label, gpus):
     metrics = []
     for i in range(1, 2):
-        list = get_accuracies(acc, f'./log_{gpus}a100_async_{i}.txt')
-        time = get_total_time(f'./log_{gpus}a100_async_{i}.txt')
+        list = get_accuracies(acc, f'./logs/log_{gpus}a100_async_{i}.txt')
+        time = get_total_time(f'./logs/log_{gpus}a100_async_{i}.txt')
         list2 = []
         for i in range(0, len(list), gpus):
             avg = 0
@@ -123,15 +123,15 @@ def get_multi_gpu_distributions(acc, linestyle, label, gpus):
 def get_multi_gpu_distributions2(acc, linestyle, label, gpus):
     metrics = []
     for i in range(1, 2):
-        list = get_accuracies(acc, f'./log_{gpus}a100_async_{i}.txt')
-        time = get_total_time(f'./log_{gpus}a100_async_{i}.txt')
+        list = get_accuracies(acc, f'./logs/log_{gpus}a100_async_{i}.txt')
+        time = get_total_time(f'./logs/log_{gpus}a100_async_{i}.txt')
         list2 = []
         for j in range(gpus):
             list2.append([])
             for i in range(j, len(list), gpus):
                 list2[j].append(list[i])
             plt.plot(
-                list2[j], label=f'{label}_{j} {time} secs', linestyle=linestyle)
+                list2[j], label=f'{label}_{j} ', linestyle=linestyle)
 
     plt.ylim([80, 99])
     plt.legend()
@@ -146,7 +146,7 @@ b = np.array(b)
 
 plt.figure()
 a2 = get_single_gpu_distributions('train_acc', ':', 'single_gpu_')
-b2 = get_multi_gpu_distributions2('train_acc', '-', 'two_gpu_', 2)
+b2 = get_multi_gpu_distributions2('train_acc', '-', 'multi_gpu_', 2)
 
 a2 = np.array(a2)
 b2 = np.array(b2)
