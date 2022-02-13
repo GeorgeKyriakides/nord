@@ -85,18 +85,18 @@ plt.legend()
 
 
 # FULL TRAIN SINGLE GPU
-new_list = get_accuracies('train_acc', './train_log_1a100_train.txt')
+new_list = get_accuracies('train_acc', './logs/train_log_1a100_train.txt')
 plt.plot(new_list, label='train')
-new_list = get_accuracies('valid_acc', './train_log_1a100_train.txt')
+new_list = get_accuracies('valid_acc', './logs/train_log_1a100_train.txt')
 plt.plot(new_list, label='valid')
 plt.ylim([80, 99])
 plt.legend()
 
 
 # FULL TRAIN TWO GPU
-new_list = get_accuracies('valid_acc', './train_log_1a100_train.txt')
+new_list = get_accuracies('valid_acc', './logs/train_log_1a100_train.txt')
 plt.plot(new_list, label='one gpu')
-new_list = get_accuracies('valid_acc', './train_log_2a100_train.txt')
+new_list = get_accuracies('valid_acc', './logs/train_log_2a100_train.txt')
 plt.plot(new_list, label='two gpu')
 plt.ylim([80, 99])
 plt.xlim([0, 50])

@@ -70,10 +70,11 @@ class DARTSNet(nn.Module):
         self._criterion = criterion
         self._steps = steps
         self._multiplier = multiplier
+        self._data_channels = data_channels
 
         C_curr = stem_multiplier*C
         self.stem = nn.Sequential(
-            nn.Conv2d(data_channels, C_curr, data_channels,
+            nn.Conv2d(data_channels, C_curr, 3,
                       padding=1, bias=False),
             nn.BatchNorm2d(C_curr)
         )
@@ -82,7 +83,7 @@ class DARTSNet(nn.Module):
         self.cells = nn.ModuleList()
         reduction_prev = False
         for i in range(layers):
-            if i in [layers//data_channels, 2*layers//data_channels]:
+            if i in [layers//3, 2*layers//3]:
                 C_curr *= 2
                 reduction = True
             else:
@@ -100,7 +101,7 @@ class DARTSNet(nn.Module):
 
     def new(self):
         model_new = DARTSNet(self._C, self._num_classes,
-                             self._layers, self._criterion).cuda()
+                             self._layers, self._criterion, data_channels=self._data_channels).cuda()
         for x, y in zip(model_new.arch_parameters(), self.arch_parameters()):
             x.data.copy_(y.data)
         return model_new
@@ -130,9 +131,8 @@ class DARTSNet(nn.Module):
         self.alphas_reduce = Variable(
             1e-3*torch.randn(k, num_ops).cuda(), requires_grad=True)
         self._arch_parameters = [
-            self.alphas_reduce,
             self.alphas_normal,
-
+            self.alphas_reduce,
         ]
 
     def arch_parameters(self):
@@ -183,10 +183,11 @@ class DistributedDARTSNet(nn.Module):
         self._criterion = criterion
         self._steps = steps
         self._multiplier = multiplier
+        self._data_channels = data_channels
 
         C_curr = stem_multiplier*C
         self.stem = nn.Sequential(
-            nn.Conv2d(data_channels, C_curr, data_channels,
+            nn.Conv2d(data_channels, C_curr, 3,
                       padding=1, bias=False),
             nn.BatchNorm2d(C_curr)
         )
@@ -195,7 +196,7 @@ class DistributedDARTSNet(nn.Module):
         self.cells = nn.ModuleList()
         reduction_prev = False
         for i in range(layers):
-            if i in [layers//data_channels, 2*layers//data_channels]:
+            if i in [layers//3, 2*layers//3]:
                 C_curr *= 2
                 reduction = True
             else:
@@ -213,7 +214,7 @@ class DistributedDARTSNet(nn.Module):
 
     def new(self):
         model_new = DistributedDARTSNet(self._C, self._num_classes,
-                                        self._layers, self._criterion).cuda()
+                                        self._layers, self._criterionm, data_channels=self._data_channels).cuda()
         for x, y in zip(model_new.arch_parameters(), self.arch_parameters()):
             x.data.copy_(y.data)
         return model_new
