@@ -27,9 +27,9 @@ parser.add_argument(
     "--epochs", type=int, default=5, help="num of training epochs"  # 50
 )
 parser.add_argument(
-    "--init_channels", type=int, default=6, help="num of init channels"
+    "--init_channels", type=int, default=8, help="num of init channels"
 )  # 8
-parser.add_argument("--layers", type=int, default=12,
+parser.add_argument("--layers", type=int, default=16,
                     help="total number of layers")
 parser.add_argument(
     "--model_path", type=str, default="saved_models", help="path to save the model"
