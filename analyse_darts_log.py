@@ -85,34 +85,28 @@ plt.legend()
 
 
 # FULL TRAIN SINGLE GPU
-new_list = get_accuracies('train_acc', './log_1a100_train.txt')
+new_list = get_accuracies('train_acc', './train_log_1a100_train.txt')
 plt.plot(new_list, label='train')
-new_list = get_accuracies(acc, './log_1a100_train.txt')
+new_list = get_accuracies('valid_acc', './train_log_1a100_train.txt')
 plt.plot(new_list, label='valid')
 plt.ylim([80, 99])
 plt.legend()
 
 
 # FULL TRAIN TWO GPU
-new_list = get_accuracies('valid_acc', './log_1a100_train.txt')
+new_list = get_accuracies('valid_acc', './train_log_1a100_train.txt')
 plt.plot(new_list, label='one gpu')
-new_list = get_accuracies('valid_acc', './log_2a100_train.txt')
+new_list = get_accuracies('valid_acc', './train_log_2a100_train.txt')
 plt.plot(new_list, label='two gpu')
 plt.ylim([80, 99])
 plt.xlim([0, 50])
 plt.legend()
 
-new_genotypes = get_genotypes('./log_2a100.txt')
 
-two_gpu_genotypes = [new_genotypes[x] for x in range(1, 100, 2)]
-new_genotypes = get_genotypes('./log.txt')
+def plot_all_genotypes(filename):
+    new_genotypes = get_genotypes(filename)
 
-for i in range(len(two_gpu_genotypes)):
-    genotype = eval(two_gpu_genotypes[i])
-    plot(genotype.normal, "./genotypes/two_gpu_{0}_normal".format(i))
-    plot(genotype.reduce, "./genotypes/two_gpu_{0}_reduction".format(i))
-
-for i in range(len(new_genotypes)):
-    genotype = eval(new_genotypes[i])
-    plot(genotype.normal, "./genotypes/one_gpu_{0}_normal".format(i))
-    plot(genotype.reduce, "./genotypes/one_gpu_{0}_reduction".format(i))
+    for i in range(len(new_genotypes)):
+        genotype = eval(new_genotypes[i])
+        plot(genotype.normal, f"./genotypes/{filename}_{i}_normal")
+        plot(genotype.reduce, f"./genotypes/{filename}_{i}_reduction")

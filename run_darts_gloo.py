@@ -1,7 +1,7 @@
 from nord.design.differenetiable.distributed_darts.distributed_darts import mymain
 import argparse
 
-# nohup python -u run_darts_nccl.py --master_port 12355 --master_address 127.0.0.1  --world_size 2 --batch_size 32 --rank 0 --layers 6 --init_channels 12 --backend gloo > outs.txt 2>&1 &
+# nohup python -u run_darts_nccl.py --master_port 12355 --master_address 127.0.0.1  --world_size 4 --batch_size 64 --rank 0 --layers 8 --init_channels 16 --backend gloo --epochs 50 --seed 1337 > outs.txt 2>&1 &
 
 
 parser = argparse.ArgumentParser("cifar")
@@ -16,25 +16,32 @@ parser.add_argument(
     "--learning_rate_min", type=float, default=0.001, help="min learning rate"
 )
 parser.add_argument("--momentum", type=float, default=0.9, help="momentum")
-parser.add_argument("--weight_decay", type=float, default=3e-4, help="weight decay")
-parser.add_argument("--report_freq", type=float, default=50, help="report frequency")
+parser.add_argument("--weight_decay", type=float,
+                    default=3e-4, help="weight decay")
+parser.add_argument("--report_freq", type=float,
+                    default=50, help="report frequency")
 parser.add_argument("--gpu", type=int, default=0, help="gpu device id")
-parser.add_argument("--epochs", type=int, default=5, help="num of training epochs")
+parser.add_argument("--epochs", type=int, default=5,
+                    help="num of training epochs")
 parser.add_argument(
     "--init_channels", type=int, default=16, help="num of init channels"
 )
-parser.add_argument("--layers", type=int, default=8, help="total number of layers")
+parser.add_argument("--layers", type=int, default=8,
+                    help="total number of layers")
 parser.add_argument(
     "--model_path", type=str, default="saved_models", help="path to save the model"
 )
-parser.add_argument("--cutout", action="store_true", default=False, help="use cutout")
-parser.add_argument("--cutout_length", type=int, default=16, help="cutout length")
+parser.add_argument("--cutout", action="store_true",
+                    default=False, help="use cutout")
+parser.add_argument("--cutout_length", type=int,
+                    default=16, help="cutout length")
 parser.add_argument(
     "--drop_path_prob", type=float, default=0.3, help="drop path probability"
 )
 parser.add_argument("--save", type=str, default="EXP", help="experiment name")
 parser.add_argument("--seed", type=int, default=2, help="random seed")
-parser.add_argument("--grad_clip", type=float, default=5, help="gradient clipping")
+parser.add_argument("--grad_clip", type=float,
+                    default=5, help="gradient clipping")
 parser.add_argument(
     "--train_portion", type=float, default=0.5, help="portion of training data"
 )
@@ -61,10 +68,12 @@ parser.add_argument(
     "--master_address", type=str, default=None, help="master node address"
 )
 
-parser.add_argument("--master_port", type=str, default=None, help="master node port")
+parser.add_argument("--master_port", type=str,
+                    default=None, help="master node port")
 
 
-parser.add_argument("--world_size", type=int, default=None, help="how many gpus")
+parser.add_argument("--world_size", type=int,
+                    default=None, help="how many gpus")
 
 parser.add_argument("--rank", type=int, default=None, help="my rank")
 

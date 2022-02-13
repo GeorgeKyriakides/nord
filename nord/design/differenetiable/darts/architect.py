@@ -38,7 +38,10 @@ class Architect(object):
                 input_train, target_train, input_valid, target_valid, eta, network_optimizer)
         else:
             self._backward_step(input_valid, target_valid)
+        before = self.model.arch_parameters()[0].cpu()
         self.optimizer.step()
+        after = self.model.arch_parameters()[0].cpu()
+        print(before-after)
 
     def _backward_step(self, input_valid, target_valid):
         loss = self.model._loss(input_valid, target_valid)

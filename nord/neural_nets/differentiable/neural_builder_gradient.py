@@ -130,8 +130,9 @@ class DARTSNet(nn.Module):
         self.alphas_reduce = Variable(
             1e-3*torch.randn(k, num_ops).cuda(), requires_grad=True)
         self._arch_parameters = [
-            self.alphas_normal,
             self.alphas_reduce,
+            self.alphas_normal,
+
         ]
 
     def arch_parameters(self):
