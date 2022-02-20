@@ -37,7 +37,7 @@ def plot(genotype, filename):
     for i in range(steps):
         g.edge(str(i), "c_{k}", fillcolor="gray")
 
-    g.render(filename, view=False)
+    g.render(filename, view=False, format='png')
 
 
 def get_accuracies(text, file_name):

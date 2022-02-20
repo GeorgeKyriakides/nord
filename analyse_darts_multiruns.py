@@ -93,11 +93,13 @@ def get_single_gpu_distributions(acc, linestyle, label):
     metrics = []
     avg_time = 0
     for i in range(1, 6):
-        list = get_accuracies(acc, f'./logs/log_1a100_{i}.txt')
+        list = get_accuracies(
+            acc, f'./logs/with_reductions/nccl_1node_1a100_{i}/log.txt')
         metrics.append(list)
-        time = get_total_time(f'./logs/log_1a100_{i}.txt')
+        time = get_total_time(
+            f'./logs/with_reductions/nccl_1node_1a100_{i}/log.txt')
         avg_time += time
-        plt.plot(list, label=f'{label}_{i} ', linestyle=linestyle)
+        plt.plot(list, label=f'{label}_{i} {time} secs', linestyle=linestyle)
     avg_time /= 5
     print(f'Single gpu times: {avg_time}')
     plt.ylim([80, 99])
@@ -108,62 +110,58 @@ def get_single_gpu_distributions(acc, linestyle, label):
 def get_multi_gpu_distributions(acc, linestyle, label, gpus):
     metrics = []
     avg_time = 0
-    for i in range(1, 2):
-        list = get_accuracies(acc, f'./logs/log_{gpus}a100_async_{i}.txt')
-        time = get_total_time(f'./logs/log_{gpus}a100_async_{i}.txt')
+    for i in range(1, 6):
+        list = get_accuracies(
+            acc, f'./logs/with_reductions/nccl_1node_{gpus}a100_{i}/log.txt')
+        time = get_total_time(
+            f'./logs/with_reductions/nccl_1node_{gpus}a100_{i}/log.txt')
         avg_time += time
         list2 = []
-        for i in range(0, len(list), gpus):
+        for j in range(0, len(list), gpus):
             avg = 0
-            for j in range(gpus):
-                avg += list[i+j]
+            for k in range(gpus):
+                avg += list[k+j]
+            avg /= gpus
             list2.append(avg)
         plt.plot(list2, label=f'{label}_{i} {time} secs', linestyle=linestyle)
         metrics.append(list2)
-    avg_time /= gpus
-    print(f'Multi gpu times: {avg_time}')
+    avg_time /= 5
+    print(f'{gpus} gpu times: {avg_time}')
     plt.ylim([80, 99])
     plt.legend()
     return metrics
 
 
-def get_multi_gpu_distributions2(acc, linestyle, label, gpus):
-    metrics = []
-    avg_time = 0
-    for i in range(1, 2):
-        list = get_accuracies(acc, f'./logs/log_{gpus}a100_async_{i}.txt')
-        time = get_total_time(f'./logs/log_{gpus}a100_async_{i}.txt')
-        avg_time += time
-        list2 = []
-        for j in range(gpus):
-            list2.append([])
-            for i in range(j, len(list), gpus):
-                list2[j].append(list[i])
-            plt.plot(
-                list2[j], label=f'{label}_{j} ', linestyle=linestyle)
-    print(f'Multi gpu times: {avg_time}')
-    plt.ylim([80, 99])
-    plt.legend()
-    return list2
+multis = 2
 
-
+plt.figure(figsize=(8, 6), dpi=300)
 a = get_single_gpu_distributions('valid_acc', ':', 'single_gpu_')
-b = get_multi_gpu_distributions2('valid_acc', '-', 'multi_gpu_', 2)
+# a = get_multi_gpu_distributions('valid_acc', '--', 'multi_gpu_', 4)
+b = get_multi_gpu_distributions('valid_acc', '-', f'{multis}_gpu_', multis)
+b = get_multi_gpu_distributions('valid_acc', '--', f'4_gpu_', 4)
+plt.plot([95 for x in range(50)], linestyle='--')
+plt.title('validation accuracies')
 
-a = np.array(a)
-b = np.array(b)
+# a = np.array(a)
+# b = np.array(b)
 
-plt.figure()
+plt.figure(figsize=(8, 6), dpi=300)
 a2 = get_single_gpu_distributions('train_acc', ':', 'single_gpu_')
-b2 = get_multi_gpu_distributions2('train_acc', '-', 'multi_gpu_', 2)
+# a2 = get_multi_gpu_distributions('valid_acc', '--', 'multi_gpu_', 4)
+b2 = get_multi_gpu_distributions('train_acc', '-', f'{multis}_gpu_', multis)
+b2 = get_multi_gpu_distributions('train_acc', '--', f'4_gpu_', 4)
 
-a2 = np.array(a2)
-b2 = np.array(b2)
+plt.title('train accuracies')
 
-single_gpu_train_val_ratio = a/a2
-two_gpu_train_val_ratio = b/b2
+# a2 = np.array(a2)
+# b2 = np.array(b2)
 
-plt.figure()
-plt.plot(single_gpu_train_val_ratio.T, linestyle=':')
-plt.plot(two_gpu_train_val_ratio.T, linestyle='-')
-plt.ylim([0.9, 1.1])
+# single_gpu_train_val_ratio = a/a2
+# two_gpu_train_val_ratio = b/b2
+
+# plt.figure()
+# plt.plot(single_gpu_train_val_ratio.T, linestyle=':')
+# plt.plot(two_gpu_train_val_ratio.T, linestyle='-')
+# plt.plot([1 for x in range(50)])
+# plt.ylim([0.9, 1.1])
+# plt.title('train/validation ratio')

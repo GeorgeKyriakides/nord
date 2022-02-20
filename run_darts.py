@@ -5,7 +5,7 @@ import argparse
 
 # nohup python -u run_darts_nccl.py --master_port 12355 --master_address 127.0.0.1  --world_size 1 --rank 0 --batch_size 64 --layers 8 --init_channels 16 > outs.txt 2>&1 &
 
-# nohup python -u run_darts.py  --batch_size 64 --layers 8 --init_channels 16 --seed 1337 > outs.txt 2>&1 &
+# nohup python -u run_darts.py  --batch_size 64 --layers 8 --init_channels 16 --seed 1337 --epochs 50 > outs.txt 2>&1 &
 parser = argparse.ArgumentParser("cifar")
 parser.add_argument(
     "--data", type=str, default="../data", help="location of the data corpus"
