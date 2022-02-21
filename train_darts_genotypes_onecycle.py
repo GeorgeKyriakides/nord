@@ -133,11 +133,12 @@ def main():
         optimizer, max_lr=args.learning_rate*20, steps_per_epoch=len(train_queue)+int(args.epochs), epochs=int(args.epochs))
 
     for epoch in range(args.epochs):
-        scheduler.step()
+
         logging.info('epoch %d lr %e', epoch, scheduler.get_lr()[0])
         model.drop_path_prob = args.drop_path_prob * epoch / args.epochs
 
-        train_acc, train_obj = train(train_queue, model, criterion, optimizer)
+        train_acc, train_obj = train(
+            train_queue, model, criterion, optimizer, scheduler)
         logging.info('train_acc %f', train_acc)
 
         valid_acc, valid_obj = infer(valid_queue, model, criterion)
@@ -146,13 +147,14 @@ def main():
         utils.save(model, os.path.join(args.save, 'weights.pt'))
 
 
-def train(train_queue, model, criterion, optimizer):
+def train(train_queue, model, criterion, optimizer, scheduler):
     objs = utils.AvgrageMeter()
     top1 = utils.AvgrageMeter()
     top5 = utils.AvgrageMeter()
     model.train()
 
     for step, (input, target) in enumerate(train_queue):
+        scheduler.step()
         input = Variable(input).cuda()
         target = Variable(target).cuda()
 
