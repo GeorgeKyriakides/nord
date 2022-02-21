@@ -75,9 +75,8 @@ def main():
     criterion = nn.CrossEntropyLoss()
     criterion = criterion.cuda()
 
-    _, test_transform = utils._data_transforms_cifar10(args)
-    test_data = dset.CIFAR10(root=args.data, train=False,
-                             download=True, transform=test_transform)
+    trainloader, testloader, _ = get_fashion_mnist()
+    test_data = testloader.dataset
 
     test_queue = torch.utils.data.DataLoader(
         test_data, batch_size=args.batch_size, shuffle=False, pin_memory=True, num_workers=2)
