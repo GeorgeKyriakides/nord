@@ -12,6 +12,7 @@ import torch.utils
 import torchvision.datasets as dset
 from nord.neural_nets.differentiable.neural_builder_gradient import DARTSNet
 from torch.autograd import Variable
+from nord.neural_nets.differentiable.model import NetworkCIFAR
 
 from nord.design.differenetiable.darts import utils
 from nord.neural_nets.differentiable import genotypes
@@ -64,8 +65,8 @@ def main():
     logging.info("args = %s", args)
 
     genotype = eval("genotypes.%s" % args.arch)
-    model = DARTSNet(args.init_channels, CIFAR_CLASSES,
-                     args.layers, args.auxiliary, genotype, data_channels=1)
+    model = NetworkCIFAR(args.init_channels, CIFAR_CLASSES,
+                         args.layers, args.auxiliary, genotype, data_channels=1)
     model = model.cuda()
     utils.load(model, args.model_path)
 
