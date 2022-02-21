@@ -70,37 +70,53 @@ def get_genotypes(file_name):
     return new_list
 
 
-acc = 'valid_acc'
-new_list = get_accuracies(acc, './log_2a100.txt')
-two_gpus = []
+# acc = 'valid_acc'
+# new_list = get_accuracies(acc, './log_2a100.txt')
+# two_gpus = []
 
-for x in range(0, 100, 2):
-    two_gpus.append((new_list[x]+new_list[x+1])/2)
+# for x in range(0, 100, 2):
+#     two_gpus.append((new_list[x]+new_list[x+1])/2)
 
-new_list = get_accuracies(acc, './log.txt')
-plt.plot(two_gpus, label='two_gpus')
-plt.plot(new_list, label='one_gpu')
-plt.ylim([80, 99])
-plt.legend()
+# new_list = get_accuracies(acc, './log.txt')
+# plt.plot(two_gpus, label='two_gpus')
+# plt.plot(new_list, label='one_gpu')
+# plt.ylim([80, 99])
+# plt.legend()
 
 
 # FULL TRAIN SINGLE GPU
-new_list = get_accuracies('train_acc', './logs/train_log_1a100_train.txt')
+new_list = get_accuracies(
+    'train_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_1a100_default_train/log.txt')
 plt.plot(new_list, label='train')
-new_list = get_accuracies('valid_acc', './logs/train_log_1a100_train.txt')
+new_list = get_accuracies(
+    'valid_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_1a100_default_train/log.txt')
 plt.plot(new_list, label='valid')
 plt.ylim([80, 99])
+plt.title('Single gpu trained')
 plt.legend()
 
 
 # FULL TRAIN TWO GPU
-new_list = get_accuracies('valid_acc', './logs/train_log_1a100_train.txt')
-plt.plot(new_list, label='one gpu')
-new_list = get_accuracies('valid_acc', './logs/train_log_2a100_train.txt')
-plt.plot(new_list, label='two gpu')
+new_list = get_accuracies(
+    'train_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_2a100_default_train/log.txt')
+plt.plot(new_list, label='train')
+new_list = get_accuracies(
+    'valid_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_2a100_default_train/log.txt')
+plt.plot(new_list, label='valid')
 plt.ylim([80, 99])
-plt.xlim([0, 50])
 plt.legend()
+plt.title('Two gpu trained')
+
+
+new_list = get_accuracies(
+    'valid_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_1a100_default_train/log.txt')
+plt.plot(new_list, label='one gpu')
+new_list = get_accuracies(
+    'valid_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_2a100_default_train/log.txt')
+plt.plot(new_list, label='two gpu')
+# plt.ylim([80, 99])
+plt.legend()
+plt.title('Two vs one gpu trained')
 
 
 def plot_all_genotypes(filename):
