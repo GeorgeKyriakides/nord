@@ -81,6 +81,7 @@ class AuxiliaryHeadCIFAR(nn.Module):
             nn.Conv2d(C, 128, 1, bias=False),
             nn.BatchNorm2d(128),
             nn.ReLU(inplace=True),
+            nn.AvgPool2d(5, stride=3, padding=0, count_include_pad=False),
             nn.Conv2d(128, 768, 2, bias=False),
             nn.BatchNorm2d(768),
             nn.ReLU(inplace=True)
