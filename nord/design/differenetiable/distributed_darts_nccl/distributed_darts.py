@@ -202,7 +202,7 @@ def main(local_rank, args, world_size):
     )
 
     validation_sampler = torch.utils.data.distributed.DistributedSampler(
-        train_data,
+        validation_data,
         num_replicas=args.world_size,
         rank=rank
     )

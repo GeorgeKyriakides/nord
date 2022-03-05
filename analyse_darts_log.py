@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
+import seaborn as sns
 from graphviz import Digraph
-
+from scipy import stats
+import pandas as pd
 from nord.neural_nets.differentiable.genotypes import Genotype
 
 
@@ -108,15 +110,46 @@ plt.legend()
 plt.title('Two gpu trained')
 
 
+# FULL TRAIN FOUR GPU
 new_list = get_accuracies(
+    'train_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_4a100_default_train/log.txt')
+plt.plot(new_list, label='train')
+new_list = get_accuracies(
+    'valid_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_4a100_default_train/log.txt')
+plt.plot(new_list, label='valid')
+plt.ylim([80, 99])
+plt.legend()
+plt.title('Two gpu trained')
+
+new_list_1 = get_accuracies(
     'valid_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_1a100_default_train/log.txt')
-plt.plot(new_list, label='one gpu')
-new_list = get_accuracies(
+new_list_1 = new_list_1[:250]
+plt.plot(new_list_1, label='one gpu')
+new_list_2 = get_accuracies(
     'valid_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_2a100_default_train/log.txt')
-plt.plot(new_list, label='two gpu')
+plt.plot(new_list_2, label='two gpu')
+new_list_4 = get_accuracies(
+    'valid_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_4a100_default_train/log.txt')
+plt.plot(new_list_4, label='four gpu')
 # plt.ylim([80, 99])
 plt.legend()
-plt.title('Two vs one gpu trained')
+plt.title('Validation comparison')
+
+print('ks 1 vs 2: ', stats.ks_2samp(new_list_1, new_list_2))
+print('ks 2 vs 4: ', stats.ks_2samp(new_list_4, new_list_2))
+print('ks 1 vs 4: ', stats.ks_2samp(new_list_1, new_list_4))
+
+print('ks 1 vs 2: ', stats.kruskal(new_list_1, new_list_2, new_list_4))
+
+
+df = pd.DataFrame(
+    {'one_gpu': new_list_1, 'two_gpu': new_list_2, 'four_gpu': new_list_4})
+sns.boxplot(data=df, )
+plt.title('')
+
+print('r 1 vs 2: ', stats.pearsonr(new_list_1, new_list_2))
+print('r 2 vs 4: ', stats.pearsonr(new_list_4, new_list_2))
+print('r 1 vs 4: ', stats.pearsonr(new_list_1, new_list_4))
 
 
 def plot_all_genotypes(filename):
