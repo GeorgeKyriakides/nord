@@ -167,8 +167,8 @@ def main(parser):
         genotype = model.genotype()
         logging.info('genotype = %s', genotype)
 
-        print(F.softmax(model.alphas_normal, dim=-1))
-        print(F.softmax(model.alphas_reduce, dim=-1))
+        # print(F.softmax(model.alphas_normal, dim=-1))
+        # print(F.softmax(model.alphas_reduce, dim=-1))
 
         # training
         train_acc, train_obj = train(

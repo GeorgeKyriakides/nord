@@ -224,8 +224,8 @@ def main(local_rank, args, world_size):
         genotype = model.genotype()
         logging.info('genotype = %s', genotype)
 
-        print(F.softmax(model.arch_alphas_normal, dim=-1))
-        print(F.softmax(model.arch_alphas_reduce, dim=-1))
+        # print(F.softmax(model.arch_alphas_normal, dim=-1))
+        # print(F.softmax(model.arch_alphas_reduce, dim=-1))
 
         # training
         train_acc, train_obj = train(
