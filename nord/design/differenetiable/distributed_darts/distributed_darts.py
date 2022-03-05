@@ -192,7 +192,7 @@ def main(local_rank, args, world_size):
     # pin_memory=True, num_workers=2)
 
     valid_queue = torch.utils.data.DataLoader(
-        validation_data, batch_size=args.batch_size,
+        train_data, batch_size=args.batch_size,
         sampler=torch.utils.data.sampler.SubsetRandomSampler(
             indices[split:num_train]),
         num_workers=0)
