@@ -9,6 +9,7 @@ Created on Sun Aug  5 18:54:54 2018
 
 from . import layers
 from .benchmark_evaluators import BenchmarkEvaluator
+from .naswot_evaluator import NaswotEvaluator
 from .natsbench_evaluator import NATSBench_Evaluator
 from .neural_builder import NeuralNet
 from .neural_descriptor import NeuralDescriptor
@@ -24,4 +25,5 @@ __all__ = ['layers',
            'data_curators',
            'BenchmarkEvaluator',
            'NATSBench_Evaluator',
+           'NaswotEvaluator',
            ]

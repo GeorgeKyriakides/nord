@@ -99,6 +99,13 @@ class DARTSNet(nn.Module):
 
         self._initialize_alphas()
 
+    def set_arch_parameters(self, new):
+        olds = self.alphas_normal.clone()
+        self.alphas_normal.data = torch.Tensor(new[0]).cuda()
+        self.alphas_reduce.data = torch.Tensor(new[1]).cuda()
+
+        # print(olds-self.alphas_normal)
+
     def new(self):
         model_new = DARTSNet(self._C, self._num_classes,
                              self._layers, self._criterion, data_channels=self._data_channels).cuda()
