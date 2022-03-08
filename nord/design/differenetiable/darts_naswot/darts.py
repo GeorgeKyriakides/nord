@@ -38,14 +38,32 @@ class darts_problem:
         self.naswot = NaswotEvaluator()
 
     def fitness(self, x):
-        self.model.set_arch_parameters(x.reshape(2, 14, 8))
+        this_x = x.reshape(2, 14, 8)
+        self.model.set_arch_parameters(this_x/10)
         K, score = self.naswot.net_evaluate(
             self.model, batch_size=64, dataset='fashion-mnist')
-        print(self.model.genotype())
-        return [-score]
+        with open('test.out', 'a') as f:
+            f.write(str(self.model.genotype()))
+            f.write('\n')
+
+        ineqs = [-score]
+
+        # for i in range(2):
+        #     for j in range(14):
+        #         s = 0
+        #         for k in range(8):
+        #             k += this_x[i, j, k]
+        #         ineqs.append(s)
+        return ineqs
 
     def get_bounds(self):
-        return ((np.zeros((2, 14, 8))-10).reshape(-1), (np.zeros((2, 14, 8))+10).reshape(-1))
+        return ((np.zeros((2, 14, 8))).reshape(-1), (np.zeros((2, 14, 8))+1).reshape(-1))
+
+    def get_nix(self):
+        return len(self.get_bounds()[0])
+
+    # def get_nic(self):
+    #     return 2*14
 
 
 def main(parser):
@@ -149,11 +167,11 @@ def main(parser):
 
     prob = pg.problem(problem_f)
     print(prob)
-    uda = pg.sea(50)
+    uda = pg.cmaes(50)
     algo = pg.algorithm(uda)
 
     algo.set_verbosity(1)
-    pop = pg.population(prob, size=1)
+    pop = pg.population(prob, size=10)
 
     pop = algo.evolve(pop)
 
