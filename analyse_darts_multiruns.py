@@ -1,9 +1,11 @@
+
 from turtle import color
 
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 import pandas as pd
+import scipy.stats as stats
 import seaborn as sns
 from dateutil import parser
 from graphviz import Digraph
@@ -104,6 +106,8 @@ def plot_last_genotypes(filename, name):
     plot(genotype.normal, f"./genotypes/{name}_last_normal")
     plot(genotype.reduce, f"./genotypes/{name}_last_reduction")
 
+    return genotype
+
 
 def get_accuracies(text, file_name):
     with open(file_name, "r") as file_read:
@@ -140,12 +144,15 @@ def get_total_time(file_name):
 def get_multi_gpu_distributions(acc, linestyle, label, color, gpus):
     metrics = []
     avg_time = 0
-    for i in range(1, 6):
+    best = 0
+    best_no = None
+    best_genotype = None
+    for i in range(1, 5):
         filename = f'./logs/with_reductions/nccl_1node_{gpus}a100_{i}/log.txt'
         list = get_accuracies(acc, filename)
         time = get_total_time(filename)
         # print(filename, time)
-        plot_last_genotypes(filename, f'nccl_1node_{gpus}a100_{i}')
+        this_gen = plot_last_genotypes(filename, f'nccl_1node_{gpus}a100_{i}')
         avg_time += time
         list2 = []
         for j in range(0, len(list), gpus):
@@ -154,6 +161,10 @@ def get_multi_gpu_distributions(acc, linestyle, label, color, gpus):
                 avg += list[k+j]
             avg /= gpus
             list2.append(avg)
+        if list2[-1] > best:
+            best = list2[-1]
+            best_genotype = this_gen
+            best_no = i
         if i == 1:
             plt.plot(list2, label=f'{label}',
                      linestyle=linestyle, color=color)
@@ -162,6 +173,7 @@ def get_multi_gpu_distributions(acc, linestyle, label, color, gpus):
         metrics.append(list2)
     avg_time /= 5
     print(f'{gpus} gpu times: {avg_time}')
+    print(f'{gpus} gpu best: {best_no} {best} {best_genotype}')
     plt.ylim([80, 100])
     plt.legend()
     return metrics, avg_time
@@ -172,7 +184,7 @@ def get_multi_gpu_genotypes(gpus):
     avg_time = 0
     normals = []
     reductions = []
-    for i in range(1, 6):
+    for i in range(1, 5):
         filename = f'./logs/with_reductions/nccl_1node_{gpus}a100_{i}/log.txt'
         gens = get_genotypes(filename)
         gen = eval(gens[-1])
@@ -211,7 +223,7 @@ a, time_1 = get_multi_gpu_distributions('valid_acc', ':', '1 gpu', 'C0', 1)
 b, time_2 = get_multi_gpu_distributions('valid_acc', '--', '2 gpus', 'C1', 2)
 b, time_4 = get_multi_gpu_distributions('valid_acc', '-', '4 gpus', 'C2', 4)
 # plt.plot([95 for x in range(50)], linestyle='--')
-plt.title('validation accuracies')
+plt.title('Validation Accuracies')
 
 print('speedup 2:', time_1/time_2)
 print('speedup 4:', time_1/time_4)
@@ -262,16 +274,43 @@ plt.show()
 
 
 df = pd.DataFrame(
-    {'1 gpu': normals_1_ged, '2 gpus': normals_1_ged, '4 gpus': normals_4_ged})
+    {'1 gpu': normals_1_ged, '2 gpus': normals_2_ged, '4 gpus': normals_4_ged})
 sns.swarmplot(data=df)
 plt.title('Diversity in Normals')
 plt.show()
 
 df = pd.DataFrame(
-    {'1 gpu': reductions_1_ged, '2 gpus': reductions_1_ged, '4 gpus': reductions_4_ged})
+    {'1 gpu': reductions_1_ged, '2 gpus': reductions_2_ged, '4 gpus': reductions_4_ged})
 sns.swarmplot(data=df)
 plt.title('Diversity in Reductions')
 plt.show()
+
+
+# Plot them
+df = pd.DataFrame.from_dict(
+    {'1 vs 4': normals_1_4_ged, '1 vs 2': normals_1_2_ged, '2 vs 4': normals_2_4_ged, '1 gpu': reductions_1_ged, '2 gpus': reductions_2_ged, '4 gpus': reductions_4_ged}, orient='index')
+df = df.transpose()
+sns.boxplot(data=df)
+plt.title('Diversity in Normals')
+plt.show()
+
+# Plot them
+df = pd.DataFrame.from_dict(
+    {'1 gpu': reductions_1_ged, '2 gpus': reductions_2_ged, '4 gpus': reductions_4_ged, '1 vs 4': reductions_1_4_ged, '1 vs 2': reductions_1_2_ged, '2 vs 4': reductions_2_4_ged}, orient='index')
+df = df.transpose()
+sns.swarmplot(data=df)
+plt.title('Diversity in Reductions')
+plt.show()
+
+
+print('K-W on normal cells ged')
+print(stats.kruskal(normals_1_ged, normals_2_ged, normals_4_ged,
+                    normals_1_2_ged, normals_1_4_ged, normals_2_4_ged))
+
+
+print('K-W on reduction cells ged')
+print(stats.kruskal(reductions_1_ged, reductions_2_ged, reductions_4_ged,
+                    reductions_1_2_ged, reductions_1_4_ged, reductions_2_4_ged))
 
 
 # a2 = np.array(a2)

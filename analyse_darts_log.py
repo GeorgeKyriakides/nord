@@ -1,8 +1,10 @@
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import seaborn as sns
 from graphviz import Digraph
 from scipy import stats
-import pandas as pd
+
 from nord.neural_nets.differentiable.genotypes import Genotype
 
 
@@ -85,63 +87,64 @@ def get_genotypes(file_name):
 # plt.ylim([80, 99])
 # plt.legend()
 
-
-# FULL TRAIN SINGLE GPU
-new_list = get_accuracies(
-    'train_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_1a100_default_train/log.txt')
-plt.plot(new_list, label='train')
-new_list = get_accuracies(
-    'valid_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_1a100_default_train/log.txt')
-plt.plot(new_list, label='valid')
-plt.ylim([80, 99])
-plt.title('Single gpu trained')
-plt.legend()
-
-
-# FULL TRAIN TWO GPU
-new_list = get_accuracies(
-    'train_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_2a100_default_train/log.txt')
-plt.plot(new_list, label='train')
-new_list = get_accuracies(
-    'valid_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_2a100_default_train/log.txt')
-plt.plot(new_list, label='valid')
-plt.ylim([80, 99])
-plt.legend()
-plt.title('Two gpu trained')
+def plot_train_accs(title, gpu):
+    # FULL TRAIN SINGLE GPU
+    new_list = get_accuracies(
+        'train_acc', f'/home/george/Documents/nord_github/nord/logs/with_reductions/evals/eval-nccl_1node_{gpu}a100/log.txt')
+    plt.plot(new_list, label=title+' train')
+    new_list = get_accuracies(
+        'valid_acc', f'/home/george/Documents/nord_github/nord/logs/with_reductions/evals/eval-nccl_1node_{gpu}a100/log.txt')
+    plt.plot(new_list, label=title+' validation')
+    plt.ylim([80, 99])
+    plt.title(title)
+    plt.legend()
 
 
-# FULL TRAIN FOUR GPU
-new_list = get_accuracies(
-    'train_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_4a100_default_train/log.txt')
-plt.plot(new_list, label='train')
-new_list = get_accuracies(
-    'valid_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_4a100_default_train/log.txt')
-plt.plot(new_list, label='valid')
-plt.ylim([80, 99])
-plt.legend()
-plt.title('Two gpu trained')
+plt.figure()
+plot_train_accs('1 gpu', 1)
+plt.figure()
+plot_train_accs('2 gpu', 2)
+plt.figure()
+plot_train_accs('4 gpu', 4)
 
+from_index = 0
+
+plt.figure()
 new_list_1 = get_accuracies(
-    'valid_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_1a100_default_train/log.txt')
-new_list_1 = new_list_1[:250]
+    'valid_acc', f'/home/george/Documents/nord_github/nord/logs/with_reductions/evals/eval-nccl_1node_1a100/log.txt')
 plt.plot(new_list_1, label='one gpu')
 new_list_2 = get_accuracies(
-    'valid_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_2a100_default_train/log.txt')
+    'valid_acc', f'/home/george/Documents/nord_github/nord/logs/with_reductions/evals/eval-nccl_1node_2a100/log.txt')
 plt.plot(new_list_2, label='two gpu')
 new_list_4 = get_accuracies(
-    'valid_acc', '/home/george/Documents/nord_github/nord/logs/with_reductions/evals/1node_4a100_default_train/log.txt')
+    'valid_acc', f'/home/george/Documents/nord_github/nord/logs/with_reductions/evals/eval-nccl_1node_4a100/log.txt')
 plt.plot(new_list_4, label='four gpu')
 # plt.ylim([80, 99])
 plt.legend()
 plt.title('Validation comparison')
 
+
+new_list_1 = new_list_1[from_index:]
+new_list_2 = new_list_2[from_index:]
+new_list_4 = new_list_4[from_index:]
+
 print('ks 1 vs 2: ', stats.ks_2samp(new_list_1, new_list_2))
-print('ks 2 vs 4: ', stats.ks_2samp(new_list_4, new_list_2))
 print('ks 1 vs 4: ', stats.ks_2samp(new_list_1, new_list_4))
+print('ks 2 vs 4: ', stats.ks_2samp(new_list_4, new_list_2))
 
-print('ks 1 vs 2: ', stats.kruskal(new_list_1, new_list_2, new_list_4))
 
+plt.figure()
+sns.kdeplot(np.array(new_list_1)-np.array(new_list_2), label='one vs two gpu')
+sns.kdeplot(np.array(new_list_1)-np.array(new_list_4), label='one vs four gpu')
+sns.kdeplot(np.array(new_list_2)-np.array(new_list_4), label='two vs four gpu')
+# plt.ylim([80, 99])
+plt.legend()
+plt.title('Validation differences')
 
+print('kruskal 1 vs 2 vs 4: ', stats.kruskal(
+    new_list_1, new_list_2, new_list_4))
+
+plt.figure()
 df = pd.DataFrame(
     {'one_gpu': new_list_1, 'two_gpu': new_list_2, 'four_gpu': new_list_4})
 sns.boxplot(data=df, )
