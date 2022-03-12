@@ -6,6 +6,12 @@ from graphviz import Digraph
 from scipy import stats
 
 from nord.neural_nets.differentiable.genotypes import Genotype
+from statsmodels.stats.multitest import fdrcorrection
+
+
+sns.set_style("white")
+sns.set_style("ticks")
+sns.set_palette('colorblind')
 
 
 def plot(genotype, filename):
@@ -100,43 +106,65 @@ def plot_train_accs(title, gpu):
     plt.legend()
 
 
-plt.figure()
+plt.figure(dpi=300)
 plot_train_accs('1 gpu', 1)
-plt.figure()
+plt.figure(dpi=300)
 plot_train_accs('2 gpu', 2)
-plt.figure()
+plt.figure(dpi=300)
 plot_train_accs('4 gpu', 4)
 
-from_index = 0
 
-plt.figure()
+plt.figure(dpi=300)
+new_list_1 = get_accuracies(
+    'train_acc', f'/home/george/Documents/nord_github/nord/logs/with_reductions/evals/eval-nccl_1node_1a100/log.txt')
+plt.plot(new_list_1, label='1 gpu', linestyle='--')
+new_list_2 = get_accuracies(
+    'train_acc', f'/home/george/Documents/nord_github/nord/logs/with_reductions/evals/eval-nccl_1node_2a100/log.txt')
+plt.plot(new_list_2, label='2  gpu', linestyle='-')
+new_list_4 = get_accuracies(
+    'train_acc', f'/home/george/Documents/nord_github/nord/logs/with_reductions/evals/eval-nccl_1node_4a100/log.txt')
+plt.plot(new_list_4, label='4 gpu', linestyle='-.')
+plt.ylim([90, 100])
+plt.legend()
+plt.title('Train Accuracy')
+
+
+plt.figure(dpi=300)
 new_list_1 = get_accuracies(
     'valid_acc', f'/home/george/Documents/nord_github/nord/logs/with_reductions/evals/eval-nccl_1node_1a100/log.txt')
-plt.plot(new_list_1, label='one gpu')
+plt.plot(new_list_1, label='1 gpu', linestyle='--')
 new_list_2 = get_accuracies(
     'valid_acc', f'/home/george/Documents/nord_github/nord/logs/with_reductions/evals/eval-nccl_1node_2a100/log.txt')
-plt.plot(new_list_2, label='two gpu')
+plt.plot(new_list_2, label='2  gpu', linestyle='-')
 new_list_4 = get_accuracies(
     'valid_acc', f'/home/george/Documents/nord_github/nord/logs/with_reductions/evals/eval-nccl_1node_4a100/log.txt')
-plt.plot(new_list_4, label='four gpu')
-# plt.ylim([80, 99])
+plt.plot(new_list_4, label='4 gpu', linestyle='-.')
+plt.ylim([80, 100])
 plt.legend()
-plt.title('Validation comparison')
+plt.title('Validation Accuracy')
 
+
+from_index = 10
 
 new_list_1 = new_list_1[from_index:]
 new_list_2 = new_list_2[from_index:]
 new_list_4 = new_list_4[from_index:]
 
+# validation accs
 print('ks 1 vs 2: ', stats.ks_2samp(new_list_1, new_list_2))
 print('ks 1 vs 4: ', stats.ks_2samp(new_list_1, new_list_4))
 print('ks 2 vs 4: ', stats.ks_2samp(new_list_4, new_list_2))
 
 
+k_1_2 = stats.ks_2samp(new_list_1, new_list_2)[1]
+k_1_4 = stats.ks_2samp(new_list_1, new_list_4)[1]
+k_2_4 = stats.ks_2samp(new_list_4, new_list_2)[1]
+
+
 plt.figure()
-sns.kdeplot(np.array(new_list_1)-np.array(new_list_2), label='one vs two gpu')
-sns.kdeplot(np.array(new_list_1)-np.array(new_list_4), label='one vs four gpu')
-sns.kdeplot(np.array(new_list_2)-np.array(new_list_4), label='two vs four gpu')
+sns.kdeplot(np.array(new_list_1)-np.array(new_list_2), label='one vs 2  gpu')
+sns.kdeplot(np.array(new_list_1)-np.array(new_list_4), label='one vs 4 gpu')
+sns.kdeplot(np.array(new_list_2)-np.array(new_list_4), label='two vs 4 gpu')
 # plt.ylim([80, 99])
 plt.legend()
 plt.title('Validation differences')
@@ -150,15 +178,16 @@ df = pd.DataFrame(
 sns.boxplot(data=df, )
 plt.title('')
 
-print('r 1 vs 2: ', stats.pearsonr(new_list_1, new_list_2))
-print('r 2 vs 4: ', stats.pearsonr(new_list_4, new_list_2))
-print('r 1 vs 4: ', stats.pearsonr(new_list_1, new_list_4))
+# print('r 1 vs 2: ', stats.pearsonr(new_list_1, new_list_2))
+# print('r 2 vs 4: ', stats.pearsonr(new_list_4, new_list_2))
+# print('r 1 vs 4: ', stats.pearsonr(new_list_1, new_list_4))
 
 
-def plot_all_genotypes(filename):
-    new_genotypes = get_genotypes(filename)
+# def plot_all_genotypes(filename):
+#     new_genotypes = get_genotypes(filename)
 
-    for i in range(len(new_genotypes)):
-        genotype = eval(new_genotypes[i])
-        plot(genotype.normal, f"./genotypes/{filename}_{i}_normal")
-        plot(genotype.reduce, f"./genotypes/{filename}_{i}_reduction")
+#     for i in range(len(new_genotypes)):
+#         genotype = eval(new_genotypes[i])
+#         plot(genotype.normal, f"./genotypes/{filename}_{i}_normal")
+#         plot(genotype.reduce, f"./genotypes/{filename}_{i}_reduction")
+fdrcorrection((k_1_2, k_1_4, k_2_4))

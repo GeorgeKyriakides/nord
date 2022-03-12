@@ -12,6 +12,10 @@ from graphviz import Digraph
 
 from nord.neural_nets.differentiable.genotypes import Genotype
 
+sns.set_style("white")
+sns.set_style("ticks")
+sns.set_palette('colorblind')
+
 
 def get_genotypes(file_name):
     text = 'genotype'
@@ -109,6 +113,15 @@ def plot_last_genotypes(filename, name):
     return genotype
 
 
+def plot_genotype(genotype, name):
+
+    genotype = eval(genotype)
+    plot(genotype.normal, f"./genotypes/{name}_normal")
+    plot(genotype.reduce, f"./genotypes/{name}_reduction")
+
+    return genotype
+
+
 def get_accuracies(text, file_name):
     with open(file_name, "r") as file_read:
 
@@ -125,8 +138,8 @@ def get_accuracies(text, file_name):
 
 
 def get_total_time(file_name):
-    start_time = 0
-    end_time = 0
+    start_time = None
+    end_time = None
     with open(file_name, "r") as file_read:
 
         lines = file_read.readlines()
@@ -135,7 +148,7 @@ def get_total_time(file_name):
         idx = 0
 
         for line in lines:
-            if 'epoch 0' in line:
+            if 'epoch 0' in line and start_time is None:
                 start_time = line.split(',')[0]
             end_time = line.split(',')[0]
     return (parser.parse(end_time) - parser.parse(start_time)).total_seconds()
@@ -146,13 +159,16 @@ def get_multi_gpu_distributions(acc, linestyle, label, color, gpus):
     avg_time = 0
     best = 0
     best_no = None
+    best_epoch = None
     best_genotype = None
     for i in range(1, 5):
         filename = f'./logs/with_reductions/nccl_1node_{gpus}a100_{i}/log.txt'
         list = get_accuracies(acc, filename)
         time = get_total_time(filename)
         # print(filename, time)
-        this_gen = plot_last_genotypes(filename, f'nccl_1node_{gpus}a100_{i}')
+        # this_gen = plot_last_genotypes(filename, f'nccl_1node_{gpus}a100_{i}')
+        gens = get_genotypes(filename)
+        print(f'gpu {gpus} time {time}')
         avg_time += time
         list2 = []
         for j in range(0, len(list), gpus):
@@ -163,17 +179,19 @@ def get_multi_gpu_distributions(acc, linestyle, label, color, gpus):
             list2.append(avg)
         if list2[-1] > best:
             best = list2[-1]
-            best_genotype = this_gen
+            best_genotype = gens[j]
             best_no = i
+            best_epoch = len(list2)
         if i == 1:
             plt.plot(list2, label=f'{label}',
                      linestyle=linestyle, color=color)
         else:
             plt.plot(list2, linestyle=linestyle, color=color)
         metrics.append(list2)
-    avg_time /= 5
+    avg_time /= 4
     print(f'{gpus} gpu times: {avg_time}')
-    print(f'{gpus} gpu best: {best_no} {best} {best_genotype}')
+    print(f'{gpus} gpu best: {best_no} {best_epoch} {best} {best_genotype}')
+    plot_genotype(best_genotype, f'{gpus}_gpus')
     plt.ylim([80, 100])
     plt.legend()
     return metrics, avg_time
@@ -218,22 +236,22 @@ def get_cross_ged_values(genotypes1, genotypes2):
 
 
 # Plot performance
-plt.figure(figsize=(8, 6), dpi=300)
-a, time_1 = get_multi_gpu_distributions('valid_acc', ':', '1 gpu', 'C0', 1)
-b, time_2 = get_multi_gpu_distributions('valid_acc', '--', '2 gpus', 'C1', 2)
-b, time_4 = get_multi_gpu_distributions('valid_acc', '-', '4 gpus', 'C2', 4)
+plt.figure(dpi=300)
+a, time_1 = get_multi_gpu_distributions('valid_acc', '--', '1 gpu', 'C0', 1)
+b, time_2 = get_multi_gpu_distributions('valid_acc', '-', '2 gpus', 'C1', 2)
+b, time_4 = get_multi_gpu_distributions('valid_acc', '-.', '4 gpus', 'C2', 4)
 # plt.plot([95 for x in range(50)], linestyle='--')
-plt.title('Validation Accuracies')
+# plt.title('Validation Accuracy')
 
 print('speedup 2:', time_1/time_2)
 print('speedup 4:', time_1/time_4)
 
-plt.figure(figsize=(8, 6), dpi=300)
-a2 = get_multi_gpu_distributions('train_acc', ':', '1 gpu', 'C0', 1)
+plt.figure(dpi=300)
+a2 = get_multi_gpu_distributions('train_acc', '--', '1 gpu', 'C0', 1)
 b2 = get_multi_gpu_distributions('train_acc', '-', '2 gpus', 'C1', 2)
-b2 = get_multi_gpu_distributions('train_acc', '--', '4 gpus', 'C2', 4)
+b2 = get_multi_gpu_distributions('train_acc', '-.', '4 gpus', 'C2', 4)
 
-plt.title('train accuracies')
+# plt.title('train accuracies')
 
 # Get cell similarity
 
@@ -260,46 +278,48 @@ normals_2_4_ged = get_cross_ged_values(normals_2, normals_4)
 reductions_2_4_ged = get_cross_ged_values(reductions_2, reductions_4)
 
 # Plot them
-df = pd.DataFrame(
-    {'1 vs 4': normals_1_4_ged, '1 vs 2': normals_1_2_ged, '2 vs 4': normals_2_4_ged})
-sns.swarmplot(data=df)
-plt.title('Cross-Diversity in Normals')
-plt.show()
 
-df = pd.DataFrame(
-    {'1 vs 4': reductions_1_4_ged, '1 vs 2': reductions_1_2_ged, '2 vs 4': reductions_2_4_ged})
-sns.swarmplot(data=df)
-plt.title('Cross-Diversity in Reductions')
-plt.show()
+# df = pd.DataFrame(
+#     {'1 vs 4': normals_1_4_ged, '1 vs 2': normals_1_2_ged, '2 vs 4': normals_2_4_ged})
+# sns.swarmplot(data=df)
+# plt.title('Cross-Diversity in Normals')
+# plt.show()
 
-
-df = pd.DataFrame(
-    {'1 gpu': normals_1_ged, '2 gpus': normals_2_ged, '4 gpus': normals_4_ged})
-sns.swarmplot(data=df)
-plt.title('Diversity in Normals')
-plt.show()
-
-df = pd.DataFrame(
-    {'1 gpu': reductions_1_ged, '2 gpus': reductions_2_ged, '4 gpus': reductions_4_ged})
-sns.swarmplot(data=df)
-plt.title('Diversity in Reductions')
-plt.show()
+# df = pd.DataFrame(
+#     {'1 vs 4': reductions_1_4_ged, '1 vs 2': reductions_1_2_ged, '2 vs 4': reductions_2_4_ged})
+# sns.swarmplot(data=df)
+# plt.title('Cross-Diversity in Reductions')
+# plt.show()
 
 
-# Plot them
-df = pd.DataFrame.from_dict(
-    {'1 vs 4': normals_1_4_ged, '1 vs 2': normals_1_2_ged, '2 vs 4': normals_2_4_ged, '1 gpu': reductions_1_ged, '2 gpus': reductions_2_ged, '4 gpus': reductions_4_ged}, orient='index')
-df = df.transpose()
-sns.boxplot(data=df)
-plt.title('Diversity in Normals')
-plt.show()
+# df = pd.DataFrame(
+#     {'1 gpu': normals_1_ged, '2 gpus': normals_2_ged, '4 gpus': normals_4_ged})
+# sns.swarmplot(data=df)
+# plt.title('Diversity in Normals')
+# plt.show()
+
+# df = pd.DataFrame(
+#     {'1 gpu': reductions_1_ged, '2 gpus': reductions_2_ged, '4 gpus': reductions_4_ged})
+# sns.swarmplot(data=df)
+# plt.title('Diversity in Reductions')
+# plt.show()
+
 
 # Plot them
+plt.figure(dpi=300)
 df = pd.DataFrame.from_dict(
-    {'1 gpu': reductions_1_ged, '2 gpus': reductions_2_ged, '4 gpus': reductions_4_ged, '1 vs 4': reductions_1_4_ged, '1 vs 2': reductions_1_2_ged, '2 vs 4': reductions_2_4_ged}, orient='index')
+    {'1 vs 4': normals_1_4_ged, '1 vs 2': normals_1_2_ged, '2 vs 4': normals_2_4_ged, '1 gpu': normals_1_ged, '2 gpus': normals_2_ged, '4 gpus': normals_4_ged}, orient='index')
 df = df.transpose()
-sns.swarmplot(data=df)
-plt.title('Diversity in Reductions')
+sns.violinplot(data=df)
+# plt.title('Diversity in Normal Cells')
+plt.show()
+
+plt.figure(dpi=300)
+df = pd.DataFrame.from_dict(
+    {'1 vs 4': reductions_1_4_ged, '1 vs 2': reductions_1_2_ged, '2 vs 4': reductions_2_4_ged, '1 gpu': reductions_1_ged, '2 gpus': reductions_2_ged, '4 gpus': reductions_4_ged, }, orient='index')
+df = df.transpose()
+sns.violinplot(data=df)
+# plt.title('Diversity in Reduction Cells')
 plt.show()
 
 
