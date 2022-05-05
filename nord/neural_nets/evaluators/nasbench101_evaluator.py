@@ -18,7 +18,7 @@ CONV3X3 = 'conv3x3-bn-relu'
 MAXPOOL3X3 = 'maxpool3x3'
 
 
-class BenchmarkEvaluator():
+class NASBench_101Evaluator():
     """A class to evaluate a network on a benchmark
        NAS dataset.
     """
@@ -37,7 +37,7 @@ class BenchmarkEvaluator():
 
     def __descriptor_to_spec(self, descriptor):
 
-        matrix, ops = BenchmarkEvaluator.descriptor_to_matrix(descriptor)
+        matrix, ops = NASBench_101Evaluator.descriptor_to_matrix(descriptor)
         try:
             model_spec = api.ModelSpec(
                 # Adjacency matrix of the module

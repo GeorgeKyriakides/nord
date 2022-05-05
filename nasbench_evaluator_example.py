@@ -3,10 +3,10 @@ Example usage of BenchmarkEvaluator,
 which evaluates the given architecture in NASBench-101
 
 """
-from nord.neural_nets import BenchmarkEvaluator, NeuralDescriptor
+from nord.neural_nets import NASBench_101Evaluator, NeuralDescriptor
 
 # Instantiate the evaluator
-evaluator = BenchmarkEvaluator()
+evaluator = NASBench_101Evaluator()
 # Instantiate a descriptor
 d = NeuralDescriptor()
 

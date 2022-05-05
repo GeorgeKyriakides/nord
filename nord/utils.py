@@ -54,8 +54,8 @@ def assure_reproducibility(seed=0):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    torch.set_deterministic(True)
     torch.backends.cudnn.benchmark = False
+    torch.cuda.manual_seed(seed)
 
 
 def plot_descriptor(descriptor):
@@ -145,7 +145,7 @@ def plot_descriptor(descriptor):
         wrap_chars = 15
         name = str(descriptor.layers[n])
         labels[n] = "\n".join(
-            name[i : i + wrap_chars] for i in range(0, len(name), wrap_chars)
+            name[i: i + wrap_chars] for i in range(0, len(name), wrap_chars)
         )
 
     nx.draw(
@@ -261,7 +261,8 @@ def get_genomes_from_logger(loggername):
     with open(loggername1) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=";", skipinitialspace=True)
         for row in csv_reader:
-            row_csv_reader = csv.reader(row, delimiter=",", skipinitialspace=True)
+            row_csv_reader = csv.reader(
+                row, delimiter=",", skipinitialspace=True)
             data = []
             for row_data in row_csv_reader:
                 data.append(row_data)
