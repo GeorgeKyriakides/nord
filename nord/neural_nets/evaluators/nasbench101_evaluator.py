@@ -5,7 +5,7 @@ import networkx as nx
 try:
     from nasbench import api
 except Exception as e:
-    print('Could not import benechmark evaluators.')
+    print('Could not import benchmark evaluators.')
 from nord.utils import pdownload, DATA_ROOT
 
 NASBENCH_TFRECORD = DATA_ROOT+'/nasbench_only108.tfrecord'

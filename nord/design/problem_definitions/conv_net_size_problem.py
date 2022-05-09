@@ -34,6 +34,7 @@ class ConvNetSizeProblem:
         self.data_width = 32
         self.untrained = untrained
         self.config = config
+        self.evaluator = None
 
         for _ in range(max_layers):
             self.bounds[0].append(1)  # Lower bound of layer's channels
@@ -81,10 +82,8 @@ class ConvNetSizeProblem:
             The network's accuracy, in the range [0.0, 100.0].
 
         """
-        print('HIO')
         if self.evaluator is None:
-            self.evaluator = Environment(config)
-            self.evaluator.__enter__()
+            self.evaluator = Environment(self.config)
 
         descriptor = NeuralDescriptor()
         previous_in = self.data_channels
@@ -92,10 +91,11 @@ class ConvNetSizeProblem:
             out_channels = int(solution[i])
             kernel_size = int(solution[i+1])
             layer = nn.Conv2d
-            parameters = (previous_in, out_channels, kernel_size)
+            parameters = {'in_channels': previous_in,
+                          'out_channels': out_channels, 'kernel_size': kernel_size}
             previous_in = out_channels
             descriptor.add_layer_sequential(layer, parameters)
-            descriptor.add_layer_sequential(nn.ReLU6, [])
+            descriptor.add_layer_sequential(nn.ReLU6, {})
         fitness = self.evaluator.descriptor_evaluate(descriptor,
                                                      epochs=1,
                                                      untrained=self.untrained,
