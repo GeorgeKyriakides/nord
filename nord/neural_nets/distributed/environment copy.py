@@ -1,0 +1,158 @@
+"""
+Created on 2018-08-04
+
+@author: George Kyriakides
+         ge.kyriakides@gmail.com
+"""
+import warnings
+
+import torch
+
+import neural_nets.distributed.defaults as defaults
+from nord.neural_nets.evaluators.neural_evaluators import DistributedEvaluator
+from utils import get_logger
+
+try:
+    from mpi4py import MPI
+except Exception as e:
+    warnings.warn(
+        'Library mpi4py not found. Distributed environment requires mpi4py.')
+    raise(e)
+
+
+class Environment():
+    """The main context manager for the distributed environment.
+    """
+
+    def __init__(self, optimizer=None, optimizer_params=None, logger=None):
+        self.local_rank = 0
+        self.world_size = 0
+        self.world_rank = 0
+        self.comm = None
+        logger = 'NORD' if logger is None else logger
+        self.logger = get_logger(logger)
+
+        if optimizer is None or optimizer_params is None:
+            warnings.warn(
+                'Optimizer or its parameters are None, using defaults.')
+            optimizer = defaults.OPTIMIZER
+            optimizer_params = defaults.OPTIMIZER_PARAMS
+
+        verbose = defaults.VERBOSE
+        self.ev = DistributedEvaluator(optimizer, optimizer_params, verbose)
+
+    def __enter__(self):
+
+        self.comm = MPI.COMM_WORLD
+
+        self.world_size = self.comm.Get_size()
+        self.world_rank = self.comm.Get_rank()
+        local_devices = torch.cuda.device_count()
+        self.local_rank = self.world_rank % local_devices
+
+        self.print_statuses()
+        os.environ['MASTER_ADDR'] = args.master_address
+        os.environ['MASTER_PORT'] = args.master_port
+        os.environ['TORCH_DISTRIBUTED_DEBUG'] = 'DETAIL'
+
+        # initialize the process group
+        dist.init_process_group(args.backend, rank=rank, world_size=world_size)
+
+        self.workers_wait()
+
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.shutdown()
+        del self
+
+    def shutdown(self):
+        """Master sends signal to workers to stop waiting for workload.
+           All processes shut down horovod and finalize MPI.
+        """
+        if self.world_rank == 0:
+            print('Master stopped')
+            self.comm.bcast(True)  # Notify workers to stop
+        print('Worker %d stopped' % self.world_rank)
+        MPI.Finalize()
+
+    def workers_wait(self):
+        """Workers wait for signal and start to evaluate the decsriptor if prompted,
+           else they exit and start shutdown procedure.
+        """
+        if self.world_rank > 0:
+            while(True):
+                stop = False
+                stop = self.comm.bcast(stop)
+                if stop:
+                    break
+
+                descriptor = dict()
+                descriptor = self.comm.bcast(descriptor)
+
+                untrained = None
+                untrained = self.comm.bcast(untrained)
+
+                epochs = 0
+                epochs = self.comm.bcast(epochs)
+
+                data_percentage = 0
+                data_percentage = self.comm.bcast(data_percentage)
+
+                self.ev.descriptor_evaluate(descriptor, epochs, untrained)
+
+    def descriptor_evaluate(self, descriptor, epochs=5,
+                            data_percentage=1, untrained=False):
+        # Broadcast False so workers will not break from workers_wait
+        self.comm.bcast(False)
+
+        descriptor = self.comm.bcast(descriptor)
+        untrained = self.comm.bcast(untrained)
+        epochs = self.comm.bcast(epochs)
+        data_percentage = self.comm.bcast(data_percentage)
+        return self.ev.descriptor_evaluate(descriptor, epochs,
+                                           data_percentage, untrained)
+
+    def print_statuses(self):
+        """Print the rank of each process
+        """
+        if not self.master():
+            self.comm.send(('Worker %d of %d (local %d)' %
+                            (self.world_rank+1,
+                             self.world_size,
+                             self.local_rank)), 0)
+        else:
+            self.print('Master initialized.')
+            self.log('Master initialized.')
+            for i in range(1, self.world_size):
+                status = MPI.Status()
+                msg = self.comm.recv(source=i, tag=MPI.ANY_TAG, status=status)
+                self.print(msg)
+                self.log(msg)
+
+    def barrier(self):
+        """Implement a simple barrier
+        (i.e. all workers must reach this line in order to continue)
+        """
+        self.comm.Barrier()
+
+    def print(self, msg):
+        """Function to print a message only once
+           (from master).
+        """
+        if self.master():
+            print(msg)
+
+    def master(self):
+        """ Return True for the master process,
+            False for all else.
+        """
+        if self.world_rank == 0:
+            return True
+        return False
+
+    def log(self, msg):
+        """Function to log a message to the log file.
+        """
+        if self.master():
+            self.logger.info(msg)

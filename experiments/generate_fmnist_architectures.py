@@ -15,11 +15,11 @@ import numpy as np
 import torch
 import torch.optim
 
-from architectural_design.metaheuristics.genetics.neat import (
-    Genome, Innovation, SpeciesPopulations)
-from configs import CHANNELS, CRITERION, INPUT_SHAPE, NUM_CLASSES, PROBLEM_TYPE
-from neural_nets import LocalEvaluator, NeuralNet
-from utils import count_parameters, get_logger
+from nord.design.metaheuristics.genetics.neat import (
+    Genome, Innovation)
+from nord.configurations.all import Configs
+from nord.neural_nets import LocalEvaluator, NeuralNet
+from nord.utils import count_parameters, get_logger
 
 np.random.seed(654321)
 
@@ -34,6 +34,7 @@ active_nodes_limit = 20
 parameters_limit = 10*1e6
 
 dataset = 'fashion-mnist'
+configs = Configs()
 
 # no_filters, dropout_rate, weight_scaling, kernel_size, max_pooling
 layer_bound_types = [int, float, float, int, bool]
@@ -55,8 +56,6 @@ genomes = []
 
 g = Genome(layer_bound_types,
            layer_bounds,
-           hyperparameters_bound_types,
-           hyperparameters_bounds,
            add_node_rate, add_connection_rate,
            mutation_rate, innv)
 my_log = get_logger('architectures')
@@ -92,7 +91,8 @@ while generation < generations-1:
         g.mutate()
         g.remove_recursions()
         repr = g.__repr__()
-        d = g.to_descriptor((INPUT_SHAPE[dataset], CHANNELS[dataset]))
+        d = g.to_descriptor(
+            dimensions=len(configs.INPUT_SHAPE[dataset]))
         actives = g.actives
 
     print('Generated', actives)
@@ -101,17 +101,16 @@ while generation < generations-1:
     g_eval = deepcopy(g)
     g_eval.remove_recursions()
     d = g_eval.to_descriptor(
-        (INPUT_SHAPE[dataset], CHANNELS[dataset]), dimensions=len(INPUT_SHAPE[dataset]))
+        dimensions=len(configs.INPUT_SHAPE[dataset]))
 
     model = NeuralNet(
-        d, NUM_CLASSES[dataset], INPUT_SHAPE[dataset], CHANNELS[dataset], untrained=False, problem_type=PROBLEM_TYPE[dataset])
+        d, configs.NUM_CLASSES[dataset], configs.INPUT_SHAPE[dataset], configs.CHANNELS[dataset], untrained=False)
     print(model)
 
     if count_parameters(model) > parameters_limit:
         print('Exceeded max parameters')
         g = np.random.choice(pop)
-        d = g.to_descriptor(
-            (INPUT_SHAPE[dataset], CHANNELS[dataset]), dimensions=len(INPUT_SHAPE[dataset]))
+        d = g.to_descriptor(dimensions=len(configs.INPUT_SHAPE[dataset]))
         generation -= 1
         representations.add(repr)
         continue
@@ -119,8 +118,7 @@ while generation < generations-1:
     if g_eval.active_nodes > active_nodes_limit:
         print('Exceeded max active nodes')
         g = np.random.choice(pop)
-        d = g.to_descriptor(
-            (INPUT_SHAPE[dataset], CHANNELS[dataset]), dimensions=len(INPUT_SHAPE[dataset]))
+        d = g.to_descriptor(dimensions=len(configs.INPUT_SHAPE[dataset]))
         generation -= 1
         representations.add(repr)
         continue
@@ -148,8 +146,7 @@ while generation < generations-1:
         print(repr)
         traceback.print_exc()
         g = np.random.choice(pop)
-        d = g.to_descriptor(
-            (INPUT_SHAPE[dataset], CHANNELS[dataset]), dimensions=CHANNELS[dataset])
+        d = g.to_descriptor(dimensions=len(configs.INPUT_SHAPE[dataset]))
         # print(list(g.actives))
         generation -= 1
         representations.add(repr)

@@ -14,27 +14,18 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
 from nord.configurations.all import Configs
+from nord.neural_nets.distributed.distributed_configurator import DistributedConfig
 from nord.neural_nets.neural_builder import GraphRankNet, NeuralNet
 from nord.neural_nets.neural_descriptor import NeuralDescriptor
 from nord.data_curators import (get_cifar10_distributed,
                                 get_cifar10,
                                 get_fashion_mnist,
                                 get_activity_recognition_data)
+
 from nord.utils import progress_bar
-
-try:
-    import horovod.torch as hvd
-    hvd_available = True
-except Exception:
-    hvd_available = False
-    warnings.warn('Horovod not found')
-
-try:
-    from mpi4py import MPI
-except Exception:
-    warnings.warn('mpi4py not found')
 
 
 class AbstractNeuralEvaluator():
@@ -315,12 +306,6 @@ class LocalEvaluator(AbstractNeuralEvaluator):
         if not torch.cuda.is_available():
             return 'cpu'
 
-        if hvd_available:
-            try:
-                return 'cuda:%d' % hvd.local_rank()  # If horovod is initialized
-            except ValueError as e:
-                print(e)
-                warnings.warn('Horovod not initialized')
         try:
             return 'cuda:%d' % MPI.COMM_WORLD.rank  # If mpi is running
         except Exception as ee:
@@ -370,16 +355,21 @@ class LocalEvaluator(AbstractNeuralEvaluator):
 
 class DistributedEvaluator(AbstractNeuralEvaluator):
 
+    def __init__(self, configuration: DistributedConfig, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+        self.configuration = configuration
+
     def load_data(self, data_percentage: float, dataset: str):
 
+        self.dataset = dataset
         if not self.data_loaded:
             self.data_loaded = True
             if dataset == 'cifar10':
                 (self.trainloader, self.trainsampler,
                  self.testloader, self.testsampler,
-                 self.classes) = get_cifar10_distributed(hvd.size(),
-                                                         hvd.rank(),
-                                                         data_percentage)
+                 self.classes) = get_cifar10_distributed(self.configuration.world_size,
+                                                         self.configuration.world_rank)
             else:
                 raise NotImplementedError
 
@@ -391,48 +381,44 @@ class DistributedEvaluator(AbstractNeuralEvaluator):
         if not torch.cuda.is_available():
             return 'cpu'
 
-        return 'cuda:%d' % hvd.local_rank()
+        return 'cuda:%d' % self.configuration.local_rank
 
     def get_optimizer(self, net: nn.Module):
         """Returns the optimizer to train the network
         """
-        optimizer = self.optimizer_class(
-            net.parameters(), **self.optimizer_params)
-        optimizer = hvd.DistributedOptimizer(
-            optimizer, named_parameters=net.named_parameters())
 
-        hvd.broadcast_optimizer_state(optimizer, root_rank=0)
-
-        return optimizer
+        return self.optimizer_class(net.parameters(), **self.optimizer_params)
 
     def print_status_bar(self, batch_id: int, loss: float):
         """Print status after each epoch
         """
-        if hvd.rank() == 0 and self.verbose:
+        if self.configuration.world_rank == 0 and self.verbose:
             progress_bar(batch_id, len(self.trainloader), 'Loss: %.2f'
                          % (loss/(batch_id+1)))
 
     def descriptor_to_net(self, descriptor: NeuralDescriptor, untrained: bool):
         """Make a net from descriptor, accounting for any distributed comms
         """
-        MPI.COMM_WORLD.barrier()
-        descriptor = MPI.COMM_WORLD.bcast(descriptor)
+        dist.broadcast_object_list([descriptor], 0)
 
         net = NeuralNet(descriptor, self.conf.NUM_CLASSES[self.dataset],
                         self.conf.INPUT_SHAPE[self.dataset], self.conf.CHANNELS[self.dataset],
                         untrained=untrained,
                         keep_dimensions=self.conf.DIMENSION_KEEPING[self.dataset])
-        hvd.broadcast_parameters(net.state_dict(), root_rank=0)
+        functional = net.functional
+        net.to(self.set_device())
+        net = DDP(net)
+        net.functional = functional
 
         return net
 
     def process_returns(self, loss: float, accuracy: float):
         """Process loss and accuracy, accounting for any distributed testing
         """
-        loss = MPI.COMM_WORLD.allreduce(loss)/hvd.size()
-        accuracy = MPI.COMM_WORLD.allreduce(accuracy)/hvd.size()
+        loss = dist.allreduce(loss)/self.configuration.world_size
+        accuracy = dist.allreduce(accuracy)/self.configuration.world_size
 
-        if hvd.rank() == 0 and self.verbose:
+        if self.configuration.world_rank == 0 and self.verbose:
 
             print('Accuracy of the network on the test images: %.2f %%' % (
                 accuracy))

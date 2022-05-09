@@ -5,7 +5,7 @@ Created on 2018-08-02
          ge.kyriakides@gmail.com
 """
 import torch.nn as nn
-from neural_nets import NeuralDescriptor
+from nord.neural_nets import NeuralDescriptor
 
 
 class DeepNeatProblem:

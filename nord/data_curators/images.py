@@ -63,9 +63,11 @@ def get_cifar10_distributed(size: int, rank: int, train_batch: int = 256,
                                             download=True,
                                             transform=transform)
 
+    print(size, rank)
     trainsampler = torch.utils.data.distributed.DistributedSampler(
         trainset, num_replicas=size, rank=rank)
 
+    print(train_batch, test_batch)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=train_batch,
                                               sampler=trainsampler,
                                               pin_memory=True)

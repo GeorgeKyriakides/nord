@@ -1,5 +1,5 @@
 import numpy as np
-from nord.neural_nets.nasbench301_evaluator import NASBench301Evaluator, NODE, FINAL_NODE, OPS
+from nord.neural_nets.evaluators.nasbench301_evaluator import NASBench301Evaluator, NODE, FINAL_NODE, OPS
 from nord.neural_nets import NeuralDescriptor
 
 
@@ -31,11 +31,8 @@ def create_random():
 nbe = NASBench301Evaluator()
 
 normal = create_random()
-print('Normal')
-print(descriptor_to_genotype(normal))
-print('Reduction')
 reduction = create_random()
-print(descriptor_to_genotype(reduction))
+print(nbe.descriptors_to_genotype([normal, reduction]))
 
 
 print(nbe.descriptor_evaluate(normal, reduction))

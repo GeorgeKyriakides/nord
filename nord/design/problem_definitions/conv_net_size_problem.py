@@ -4,8 +4,14 @@ Created on 2018-08-02
 @author: George Kyriakides
          ge.kyriakides@gmail.com
 """
+from distutils.command.config import config
+from logging import warning
+import warnings
+import torch
 import torch.nn as nn
-from neural_nets import NeuralDescriptor
+from nord.neural_nets import NeuralDescriptor
+from nord.neural_nets.distributed.distributed_configurator import DistributedConfig
+from nord.neural_nets.distributed.environment import Environment
 
 
 class ConvNetSizeProblem:
@@ -13,7 +19,7 @@ class ConvNetSizeProblem:
     a ConvNet's layers size and channels.
     """
 
-    def __init__(self, max_layers=2, distributed=False, untrained=False):
+    def __init__(self, config: DistributedConfig = None, untrained=False, max_layers=2):
         """
         Parameters
         ----------
@@ -27,7 +33,7 @@ class ConvNetSizeProblem:
         self.data_height = 32
         self.data_width = 32
         self.untrained = untrained
-        self.distributed = distributed
+        self.config = config
 
         for _ in range(max_layers):
             self.bounds[0].append(1)  # Lower bound of layer's channels
@@ -35,12 +41,10 @@ class ConvNetSizeProblem:
             self.bounds[0].append(1)  # Lower bound of layer's size
             self.bounds[1].append(50)  # Upper bound of layer's size
 
-        if self.distributed:
-            from neural_nets import DistributedNeuralEvaluator
-            self.evaluator = DistributedNeuralEvaluator()
-        else:
-            from neural_nets import NeuralEvaluator
-            self.evaluator = NeuralEvaluator()
+        if self.config is None:
+            from nord.neural_nets.evaluators.neural_evaluators import LocalEvaluator
+            warnings.warn('Empty config. Running locally')
+            self.evaluator = LocalEvaluator(torch.optim.Adam, {}, False)
 
     def get_bounds(self):
         """Returns the upper and lower limit for each layer's two parameters:
@@ -77,6 +81,11 @@ class ConvNetSizeProblem:
             The network's accuracy, in the range [0.0, 100.0].
 
         """
+        print('HIO')
+        if self.evaluator is None:
+            self.evaluator = Environment(config)
+            self.evaluator.__enter__()
+
         descriptor = NeuralDescriptor()
         previous_in = self.data_channels
         for i in range(0, len(solution), 2):
@@ -88,7 +97,8 @@ class ConvNetSizeProblem:
             descriptor.add_layer_sequential(layer, parameters)
             descriptor.add_layer_sequential(nn.ReLU6, [])
         fitness = self.evaluator.descriptor_evaluate(descriptor,
+                                                     epochs=1,
                                                      untrained=self.untrained,
-                                                     verbose=False) * 100
+                                                     dataset='cifar10') * 100
 
         return [fitness]
