@@ -1,10 +1,13 @@
+
 import torch.nn as nn
-from nord.losses import nord_cross_entropy_loss, nord_margin_rank_loss
-from nord.metrics import accuracy, one_hot_accuracy, MSE
-from nord.metrics import binary_rank_correlation_tau_with_top as br
-from nord.metrics import regression_rank_correlation_with_top as rr
 from nord.data_curators import (get_activity_recognition_data, get_cifar10,
-                                get_fashion_mnist, get_fmnist_graphs, get_nasbench_graph_data_loaders)
+                                get_fashion_mnist, get_fmnist_graphs,
+                                get_nasbench_graph_data_loaders)
+from nord.losses import nord_cross_entropy_loss, nord_margin_rank_loss
+from nord.metrics import MSE, accuracy
+from nord.metrics import binary_rank_correlation_tau_with_top as br
+from nord.metrics import one_hot_accuracy
+from nord.metrics import regression_rank_correlation_with_top as rr
 from nord.utils import singleton
 
 from .dense_parts import get_dense_batch_net, get_dense_net, get_graph_rank_net
@@ -74,13 +77,21 @@ class Configs:
                                                    initial_pop=20, mutated=980, classes=1, val_perc=0.0,
                                                    test_perc=0.3, all_vs_all=[False, True])
 
+        def fmnist_classification(data_perc):
+            return get_fmnist_graphs(graph_bs, val_perc=0.0,
+                                     test_perc=0.3, classes=3, all_vs_all=[False, True])
+
+        def fmnist_regression(data_perc):
+            return get_fmnist_graphs(batch_size=graph_bs, val_perc=0.0,
+                                     test_perc=0.3, classes=1, all_vs_all=[False, True])
+
         self.DATA_LOAD = {'cifar10': get_cifar10,
                           'fashion-mnist': get_fashion_mnist,
                           'activity_recognition': get_activity_recognition_data,
                           'graph-nasbench3': nasbench_classification,
                           'graph-nasbench1': nasbench_regression,
-                          'graph-f-mnist3': get_fmnist_graphs,
-                          'graph-f-mnist1': get_fmnist_graphs}
+                          'graph-f-mnist3': fmnist_classification,
+                          'graph-f-mnist1': fmnist_regression}
 
         self.DENSE_PART = {'cifar10': get_dense_batch_net(3, self.NUM_CLASSES['cifar10'], nn.LogSoftmax(dim=1)),
                            'fashion-mnist': get_dense_net(2, self.NUM_CLASSES['fashion-mnist'], nn.LogSoftmax(dim=1)),
@@ -104,7 +115,11 @@ class Configs:
 
     def add_dataset(self, name: str, num_classes: int,
                     input_shape: tuple, channels: int, criterion: object,
-                    metrics: tuple, dimension_keeping: int, data_load: object, dense_part: object):
+                    metrics: tuple, dimension_keeping: int, data_load: object, dense_part: object, data_organization: str):
+
+        if data_organization not in ['matrix', 'graph']:
+            raise Exception(
+                "data_organization should be either 'graph' for graph data or 'matrix' for vectorized data (i.e. time series, images)")
 
         self.NUM_CLASSES[name] = num_classes
         self.INPUT_SHAPE[name] = input_shape
@@ -114,15 +129,16 @@ class Configs:
         self.DIMENSION_KEEPING[name] = dimension_keeping
         self.DATA_LOAD[name] = data_load
         self.DENSE_PART[name] = dense_part
+        self.INPUT_DATA_ORGANIZATION[name] = data_organization
 
     def add_classification_dataset(self, name: str, num_classes: int,
-                                   input_shape: tuple, channels: int, data_load):
+                                   input_shape: tuple, channels: int, data_load, data_organization='matrix'):
         self.add_dataset(name, num_classes, input_shape, channels,
                          nn.CrossEntropyLoss, [accuracy], None, data_load, get_dense_batch_net(
-                             3, num_classes, nn.LogSoftmax(dim=1)))
+                             3, num_classes, nn.LogSoftmax(dim=1)), data_organization)
 
     def add_regression_dataset(self, name: str, num_targets: int,
-                               input_shape: tuple, channels: int, data_load):
+                               input_shape: tuple, channels: int, data_load, data_organization='matrix'):
         self.add_dataset(name, num_targets, input_shape, channels,
                          nn.CrossEntropyLoss, [MSE], None, data_load, get_dense_batch_net(
-                             3, num_targets, nn.LogSoftmax(dim=1)))
+                             3, num_targets, nn.LogSoftmax(dim=1)), data_organization)
