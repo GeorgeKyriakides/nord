@@ -16,7 +16,8 @@ import torch.nn as nn
 
 
 from nord.configurations.all import Configs
-from nord.neural_nets import NeuralDescriptor, NeuralNet
+from nord.neural_nets.neural_builder import GraphRankNet, NeuralNet
+from nord.neural_nets.neural_descriptor import NeuralDescriptor
 from nord.data_curators import (get_cifar10_distributed,
                                 get_cifar10,
                                 get_fashion_mnist,
@@ -112,10 +113,6 @@ class AbstractNeuralEvaluator():
 
         optimizer = self.get_optimizer(net)
 
-        # for p in net.parameters():
-        #     print(p)
-        #     break
-
         criterion_loss = self.conf.CRITERION[self.dataset]()
 
         if self.conf.CRITERION[self.dataset] == nn.KLDivLoss:
@@ -131,7 +128,8 @@ class AbstractNeuralEvaluator():
             for batch_idx, data in enumerate(self.trainloader, 0):
                 # get the inputs
                 inputs, labels = data
-                inputs, labels = inputs.to(device), labels.to(device)
+                inputs = inputs.to(device)
+                labels = labels.to(device)
 
                 # zero the parameter gradients
                 optimizer.zero_grad()
@@ -347,6 +345,12 @@ class LocalEvaluator(AbstractNeuralEvaluator):
     def descriptor_to_net(self, descriptor: NeuralDescriptor, untrained: bool):
         """Make a net from descriptor, accounting for any distributed comms
         """
+
+        if self.conf.INPUT_DATA_ORGANIZATION[self.dataset] == 'graph':
+            return GraphRankNet(descriptor, self.conf.NUM_CLASSES[self.dataset],
+                                self.conf.INPUT_SHAPE[self.dataset], self.conf.CHANNELS[self.dataset],
+                                untrained=untrained)
+
         return NeuralNet(descriptor, self.conf.NUM_CLASSES[self.dataset],
                          self.conf.INPUT_SHAPE[self.dataset], self.conf.CHANNELS[self.dataset],
                          untrained=untrained,
@@ -362,141 +366,6 @@ class LocalEvaluator(AbstractNeuralEvaluator):
             print('Loss of the network on the test images: %.4f ' % (
                 loss))
         return loss, metrics
-
-
-class LocalBatchEvaluator(LocalEvaluator):
-
-    def train_work(self, params: tuple):
-        optimizer, criterion, net, inputs, labels, my_id = params
-        # zero the parameter gradients
-        optimizer.zero_grad()
-        # forward + backward + optimize
-        outputs = net(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-        my_loss = loss.item()
-        return my_id, my_loss
-
-    def train(self, nets: List[nn.Module], epochs: int):
-
-        device = self.set_device()
-
-        print('Device: ', device)
-
-        ex = futures.ThreadPoolExecutor(max_workers=4)
-
-        optimizers = []
-        for net in nets:
-            net.train()
-            net.to(device)
-
-            optimizer = self.get_optimizer(net)
-            optimizers.append(optimizer)
-
-        t = time.time()
-        criterion = self.conf.CRITERION[self.dataset]()
-        for epoch in range(epochs):  # loop over the dataset multiple times
-            if self.trainsampler is not None:
-                self.trainsampler.set_epoch(epoch)
-
-            test_losses = [0 for _ in range(len(nets))]
-            for batch_idx, data in enumerate(self.trainloader, 0):
-                # get the inputs
-                inputs, labels = data
-                inputs, labels = inputs.to(device), labels.to(device)
-                args = ((optimizers[i], criterion, nets[i],
-                         inputs, labels, i) for i in range(len(nets)))
-
-                results = ex.map(self.train_work, args)
-
-                for i, res_loss in results:
-                    # print(res_loss)
-                    test_loss = test_losses[i]
-                    test_losses[i] = test_loss + res_loss
-
-                    # self.print_status_bar(batch_idx, test_loss)
-            print(time.time()-t)
-            # criterion.increase_threshold()
-
-    def descriptors_evaluate(self, descriptors: List[NeuralDescriptor],
-                             epochs: int, data_percentage: float = 1.0,
-                             untrained: bool = False,
-                             dataset: str = None):
-        """Distributed network evaluation, with a NeuralDescriptor input.
-
-        Parameters
-        ----------
-        descriptor : NeuralDescriptor
-            The neural network's descriptor object.
-
-        untrained : bool (optional)
-            If True, skip the training.
-
-        epochs : int
-            Number of epochs that the net will be trained.
-
-        Returns
-        -------
-        test_accuracy : float
-            The average accuracy across all workers.
-
-        """
-        nets = []
-        for descriptor in descriptors:
-            net = self.descriptor_to_net(descriptor, untrained)
-            nets.append(net)
-
-        return self.nets_evaluate(nets,  epochs, data_percentage,
-                                  untrained, dataset)
-
-    def nets_evaluate(self, nets: List[nn.Module],  epochs: int,
-                      data_percentage: float = 1.0, untrained: bool = False,
-                      dataset: str = None):
-        """Distributed network evaluation, with a NeuralDescriptor input.
-
-        Parameters
-        ----------
-        descriptor : NeuralDescriptor
-            The neural network's descriptor object.
-
-        untrained : bool (optional)
-            If True, skip the training.
-
-        epochs : int
-            Number of epochs that the net will be trained.
-
-        Returns
-        -------
-        test_accuracy : float
-            The average accuracy across all workers.
-
-        """
-        self.load_data(data_percentage, dataset)
-        nets_no = len(nets)
-        losses = np.zeros(nets_no)
-        accuracies = np.zeros(nets_no)
-        non_functionals = []
-
-        start_time = time.time()
-        for i in range(nets_no):
-            net = nets[i]
-            if not net.functional:
-                non_functionals.append(i)
-        if not untrained:
-            self.train(nets, epochs)
-
-        total_time = time.time() - start_time  # in seconds
-
-        for i in range(nets_no):
-            if i not in non_functionals:
-                loss, accuracy = self.test(net)
-
-                loss, accuracy = self.process_returns(loss, accuracy)
-                losses[i] = loss
-                accuracies[i] = accuracy
-
-        return losses, accuracies, total_time
 
 
 class DistributedEvaluator(AbstractNeuralEvaluator):

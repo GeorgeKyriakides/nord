@@ -5,22 +5,37 @@ Created on Sat Jul 28 19:25:41 2018
          ge.kyriakides@gmail.com
 """
 
+import collections
 import csv
 import inspect
 import logging
 import random
 import sys
+import tarfile
 import time
 from pathlib import Path
 
+import dgl
 import numpy as np
 import requests
 import torch
 from tqdm import tqdm
-import tarfile
 
 LOGS_PATH = "Log_Files"
 DATA_ROOT = "./data"
+
+
+def send_graph_to_device(g, device):
+    return g.to(device)
+
+
+class GraphBatchPair(collections.UserList):
+    def __init__(self, *liste):
+        super().__init__(liste)
+
+    def to(self, device):
+        return (send_graph_to_device(self[0], device),
+                send_graph_to_device(self[1], device))
 
 
 def singleton(class_):
@@ -56,6 +71,71 @@ def assure_reproducibility(seed=0):
     torch.manual_seed(seed)
     torch.backends.cudnn.benchmark = False
     torch.cuda.manual_seed(seed)
+
+
+def create_pairs(outputs, originals):
+
+    sz = len(originals)
+
+    outputs_all = outputs.reshape((-1, )).expand(sz, sz).reshape((-1,))
+
+    original_all = originals.reshape((-1, )).expand(sz, sz).reshape((-1,))
+    original_all_T = originals.reshape(
+        (-1, )).expand(sz, sz).t().reshape((-1,))
+
+    z = torch.zeros(len(original_all))-1
+    labels = original_all > original_all_T
+    z[labels] = 1
+    return outputs_all, original_all, z
+
+
+def graph_pair_collate(samples):
+    # The input `samples` is a list of pairs
+    #  (graph, label).
+    graphs1, graphs2, labels = map(list, zip(*samples))
+
+    batched_graph1 = dgl.batch(graphs1)
+    batched_graph2 = dgl.batch(graphs2)
+    return (GraphBatchPair(batched_graph1, batched_graph2), torch.tensor(labels))
+
+
+def graph_collate(samples):
+    # The input `samples` is a list of pairs
+    #  (graph, label).
+    graphs1, labels = map(list, zip(*samples))
+
+    batched_graph1 = dgl.batch(graphs1)
+    return (batched_graph1, torch.tensor(labels))
+
+
+def index_to_lower_triangle_index(idx):
+    k = np.floor(-0.5 + (np.sqrt(0.25+2*idx)))
+    j = idx - k*(k+1)/2
+    id_1 = int(k)
+    id_2 = int(j)
+    return id_1, id_2
+
+
+def lower_triangle_to_full(pairwise):
+    graphs_no = int((np.sqrt(8*len(pairwise)+1)-1)/2)
+    a = np.zeros((graphs_no, graphs_no))
+    mask = np.arange(graphs_no)[:, None] >= np.arange(graphs_no)
+    a[mask] = np.array(pairwise.cpu())
+    a = np.tril(a) - np.triu(a.T, 1)
+    a = a.reshape((-1, ))
+    return a
+
+
+def rank_inds_of_lists(pairwise, indices=None, all_to_all=True):
+    pmax = torch.argmax(pairwise, dim=1)
+    pmax -= 1
+    if not all_to_all:
+        pmax = torch.Tensor(lower_triangle_to_full(pmax))
+    graphs_no = int(np.sqrt(len(pmax)))
+    pmax = pmax.reshape(graphs_no, graphs_no)
+    if indices is not None:
+        pmax = pmax[indices, :][:, indices]
+    return torch.sum(pmax, axis=1).cpu().detach().numpy()
 
 
 def plot_descriptor(descriptor):

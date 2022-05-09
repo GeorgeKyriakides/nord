@@ -6,19 +6,16 @@ Created on 2018-10-29
 """
 
 import networkx as nx
-import torch.nn as nn
 import numpy as np
-
-
-from nord.neural_nets import NeuralDescriptor
-from nord.neural_nets.layers import Identity, Conv2d151
-
+import torch.nn as nn
+from nord.neural_nets.neural_descriptor import NeuralDescriptor
+from nord.neural_nets.layers import Conv2d151, Identity
 from nord.utils import get_random_value
 
 from .chromosome import Chromosome
 from .gene import ConnectionGene, LayerGene
-from .rem_config import OUTPUT, OUTPUT_NAME, INPUT, INPUT_NAME
-from .rem_config import UNEVALUATED_FITNESS, FULL_CHANNELS_NO, DROPOUT_PROB
+from .rem_config import (DROPOUT_PROB, FULL_CHANNELS_NO, INPUT, INPUT_NAME,
+                         OUTPUT, OUTPUT_NAME, UNEVALUATED_FITNESS)
 
 CONV1X1 = 'conv1x1-bn-relu'
 CONV3X3 = 'conv3x3-bn-relu'

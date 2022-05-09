@@ -8,7 +8,7 @@ import warnings
 
 import horovod.torch as hvd
 import neural_nets.distributed.defaults as defaults
-from neural_nets.neural_evaluators import DistributedEvaluator
+from nord.neural_nets.evaluators.neural_evaluators import DistributedEvaluator
 from utils import get_logger
 
 try:

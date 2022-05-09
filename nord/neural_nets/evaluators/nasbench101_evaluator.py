@@ -73,6 +73,7 @@ class NASBench_101Evaluator():
         except:
             traceback.print_exc()
             return 0, 0
+        print('*'*50)
         return data[acc], data['training_time']
 
     @staticmethod

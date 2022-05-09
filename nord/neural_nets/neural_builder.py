@@ -347,9 +347,7 @@ class NeuralNet(_AbstractNet):
         """
         super().__init__(net_descriptor)
 
-        # self.descriptor = copy.deepcopy(net_descriptor)
-        # self.connections = self.descriptor.connections
-        # self.in_connections = self.descriptor.incoming_connections
+
         self.input_shapes = dict()
         self.input_channels = dict()
 
