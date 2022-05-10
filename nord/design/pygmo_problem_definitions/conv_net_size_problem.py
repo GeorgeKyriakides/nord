@@ -4,8 +4,6 @@ Created on 2018-08-02
 @author: George Kyriakides
          ge.kyriakides@gmail.com
 """
-from distutils.command.config import config
-from logging import warning
 import warnings
 import torch
 import torch.nn as nn
@@ -19,7 +17,7 @@ class ConvNetSizeProblem:
     a ConvNet's layers size and channels.
     """
 
-    def __init__(self, config: DistributedConfig = None, untrained=False, max_layers=2):
+    def __init__(self, *, config: DistributedConfig = None, untrained=False, max_layers=2):
         """
         Parameters
         ----------
@@ -27,6 +25,7 @@ class ConvNetSizeProblem:
             The network's depth.
 
         """
+
         self.bounds = ([], [])
         self.layers = []
         self.data_channels = 3
@@ -38,14 +37,9 @@ class ConvNetSizeProblem:
 
         for _ in range(max_layers):
             self.bounds[0].append(1)  # Lower bound of layer's channels
-            self.bounds[1].append(50)  # Upper bound of layer's channels
+            self.bounds[1].append(5)  # Upper bound of layer's channels
             self.bounds[0].append(1)  # Lower bound of layer's size
-            self.bounds[1].append(50)  # Upper bound of layer's size
-
-        if self.config is None:
-            from nord.neural_nets.evaluators.neural_evaluators import LocalEvaluator
-            warnings.warn('Empty config. Running locally')
-            self.evaluator = LocalEvaluator(torch.optim.Adam, {}, False)
+            self.bounds[1].append(3)  # Upper bound of layer's size
 
     def get_bounds(self):
         """Returns the upper and lower limit for each layer's two parameters:
@@ -82,6 +76,13 @@ class ConvNetSizeProblem:
             The network's accuracy, in the range [0.0, 100.0].
 
         """
+        # This needs to be here as pygmo pickles the object to send it to workers
+        # and Environment contains thread locks which cannot be pickled
+        if self.config is None:
+            from nord.neural_nets.evaluators.neural_evaluators import LocalEvaluator
+            warnings.warn('Empty config. Running locally')
+            self.evaluator = LocalEvaluator(torch.optim.Adam, {}, True)
+
         if self.evaluator is None:
             self.evaluator = Environment(self.config)
 
@@ -96,9 +97,9 @@ class ConvNetSizeProblem:
             previous_in = out_channels
             descriptor.add_layer_sequential(layer, parameters)
             descriptor.add_layer_sequential(nn.ReLU6, {})
-        fitness = self.evaluator.descriptor_evaluate(descriptor,
-                                                     epochs=1,
-                                                     untrained=self.untrained,
-                                                     dataset='cifar10') * 100
+        loss, metrics, time = self.evaluator.descriptor_evaluate(descriptor,
+                                                                 epochs=1,
+                                                                 untrained=self.untrained,
+                                                                 dataset='cifar10')
 
-        return [fitness]
+        return [metrics['accuracy']*100]

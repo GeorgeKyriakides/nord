@@ -4,8 +4,21 @@ Created on 2018-08-02
 @author: George Kyriakides
          ge.kyriakides@gmail.com
 """
+import warnings
+import torch
 import torch.nn as nn
 from nord.neural_nets import NeuralDescriptor
+from nord.neural_nets.distributed.distributed_configurator import DistributedConfig
+from nord.neural_nets.distributed.environment import Environment
+
+
+class LambdaLayer(nn.Module):
+    def __init__(self, lambd):
+        super(LambdaLayer, self).__init__()
+        self.lambd = lambd
+
+    def forward(self, x):
+        return self.lambd(x)
 
 
 class DeepNeatProblem:
@@ -13,7 +26,7 @@ class DeepNeatProblem:
     a Net's layers types.
     """
 
-    def __init__(self, max_layers=2, distributed=False, untrained=False):
+    def __init__(self, *, config: DistributedConfig = None, untrained=False, max_layers=2):
         """
         Parameters
         ----------
@@ -27,8 +40,10 @@ class DeepNeatProblem:
         self.data_height = 32
         self.data_width = 32
         self.untrained = untrained
-        self.distributed = distributed
         self.max_layers = max_layers
+
+        self.config = config
+        self.evaluator = None
 
         def set_bounds(min_, max_):
             self.bounds[0].append(min_)
@@ -44,20 +59,15 @@ class DeepNeatProblem:
         # Integers
         for _ in range(max_layers):
             # Lower/upper bound of layer's filter no
-            set_bounds(32, 256)
+            # Original is (32, 256), using (4, 16) to generate
+            # networks that fit in most GPUs
+            set_bounds(4, 16)
         for _ in range(max_layers):
             # Lower/upper bound of layer's kernel size
             set_bounds(1, 2)
         for _ in range(max_layers):
             # Lower/upper bound of layer's max pooling (T/F)
             set_bounds(0, 1)
-
-        if self.distributed:
-            from neural_nets import DistributedNeuralEvaluator
-            self.evaluator = DistributedNeuralEvaluator()
-        else:
-            from neural_nets import NeuralEvaluator
-            self.evaluator = NeuralEvaluator()
 
     def get_bounds(self):
         """Returns the upper and lower limit for each layer's two parameters:
@@ -94,6 +104,16 @@ class DeepNeatProblem:
             The network's accuracy, in the range [0.0, 100.0].
 
         """
+        # This needs to be here as pygmo pickles the object to send it to workers
+        # and Environment contains thread locks which cannot be pickled
+        if self.config is None:
+            from nord.neural_nets.evaluators.neural_evaluators import LocalEvaluator
+            warnings.warn('Empty config. Running locally')
+            self.evaluator = LocalEvaluator(torch.optim.Adam, {}, True)
+
+        if self.evaluator is None:
+            self.evaluator = Environment(self.config)
+
         descriptor = NeuralDescriptor()
         previous_in = self.data_channels
         for i in range(0, self.max_layers):
@@ -111,24 +131,28 @@ class DeepNeatProblem:
 
             # Define the layers and parameters
             conv_layer = nn.Conv2d
-            conv_parameters = (previous_in, out_channels, kernel_size)
+            conv_parameters = {'in_channels': previous_in,
+                               'out_channels': out_channels, 'kernel_size': kernel_size}
 
             previous_in = out_channels
 
             descriptor.add_layer_sequential(conv_layer, conv_parameters)
 
+            descriptor.add_layer_sequential(
+                LambdaLayer, {'lambd': (lambda x: x*weight_scale)})
             dout = nn.Dropout
-            dout_parameters = (dropout_rate, )
+            dout_parameters = {'p': dropout_rate}
             descriptor.add_layer_sequential(dout, dout_parameters)
             if max_pool:
                 pool = nn.MaxPool2d
-                pool_parameters = (kernel_size, )
+                pool_parameters = {'kernel_size': kernel_size}
                 descriptor.add_layer_sequential(pool, pool_parameters)
 
-            descriptor.add_layer_sequential(nn.ReLU6, [])
+            descriptor.add_layer_sequential(nn.ReLU6, {})
 
-        fitness = self.evaluator.descriptor_evaluate(descriptor,
-                                                     untrained=self.untrained,
-                                                     verbose=True) * 100
+        loss, metrics, time = self.evaluator.descriptor_evaluate(descriptor,
+                                                                 epochs=1,
+                                                                 untrained=self.untrained,
+                                                                 dataset='cifar10')
 
-        return [fitness]
+        return [metrics['accuracy']*100]

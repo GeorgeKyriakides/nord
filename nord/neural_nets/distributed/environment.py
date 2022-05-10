@@ -55,6 +55,7 @@ class Environment():
         print('PS')
         self.print_statuses()
         print('WW')
+        self.barrier()
         self.workers_wait()
 
         return self

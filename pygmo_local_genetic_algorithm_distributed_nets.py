@@ -10,9 +10,11 @@ Created on 2018-09-02
 
 import numpy as np
 import pygmo as pg
-from nord.design.problem_definitions.conv_net_size_problem import ConvNetSizeProblem
-from nord.neural_nets.distributed.distributed_configurator import DistributedConfig
 
+from nord.design.pygmo_problem_definitions.conv_net_size_problem import \
+    ConvNetSizeProblem
+from nord.neural_nets.distributed.distributed_configurator import \
+    DistributedConfig
 from nord.neural_nets.distributed.environment import Environment
 
 gens = 10
@@ -26,7 +28,7 @@ def main(untrained):
     with Environment(config) as e:
         if e.master():
             pop = None
-            prob = ConvNetSizeProblem(config, untrained=untrained)
+            prob = ConvNetSizeProblem(config=config, untrained=untrained)
             pg.set_global_rng_seed(45714)
             prob = pg.problem(prob)
             algo = pg.algorithm(pg.sga(1, m=0.2, mutation='uniform'))

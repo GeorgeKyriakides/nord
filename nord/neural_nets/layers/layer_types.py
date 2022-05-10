@@ -107,7 +107,6 @@ flatten = [Flatten]
 
 types_dict = {'convolutions': convolutions,
               'activations': activations,
-              # 'losses': losses,
               'pooling': pooling,
               'dropout': dropout,
               'linear': linear,

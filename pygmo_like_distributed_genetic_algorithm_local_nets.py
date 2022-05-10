@@ -7,9 +7,10 @@ Created on 2018-09-02
 
 # Simple example of finding the parameters for a simple ConvNet.
 
+import warnings
 import numpy as np
-from design.problem_definitions import ConvNetSizeProblem
-from utils import get_logger
+from nord.design.pygmo_problem_definitions import ConvNetSizeProblem
+from nord.utils import get_logger
 try:
     from mpi4py import MPI
 except Exception:
@@ -31,7 +32,7 @@ class DistributedGenetic():
         self.population_x = []
         self.population_f = np.array([0.0 for i in range(population_size)])
         self.prob = ConvNetSizeProblem(
-            2, distributed=False, untrained=untrained)
+            max_layers=2, untrained=untrained)
         self.comm = MPI.COMM_WORLD
 
         self.logger = get_logger(str(self.comm.Get_rank()))
@@ -139,3 +140,7 @@ class DistributedGenetic():
 def main(untrained):
     d = DistributedGenetic(10, 10, untrained=untrained)
     d.run()
+
+
+if __name__ == '__main__':
+    main(False)

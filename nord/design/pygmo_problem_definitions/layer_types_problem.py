@@ -4,10 +4,14 @@ Created on 2018-08-02
 @author: George Kyriakides
          ge.kyriakides@gmail.com
 """
+import warnings
+import torch
 import torch.nn as nn
-from neural_nets import NeuralDescriptor
-from neural_nets.layers import types_dict
-from utils import generate_layer_parameters
+from nord.neural_nets import NeuralDescriptor
+from nord.neural_nets.layers import types_dict
+from nord.neural_nets.distributed.distributed_configurator import DistributedConfig
+from nord.neural_nets.distributed.environment import Environment
+from nord.utils import generate_layer_parameters
 
 
 class LayerTypeProblem:
@@ -15,7 +19,7 @@ class LayerTypeProblem:
     a Net's layers types.
     """
 
-    def __init__(self, max_layers=2, distributed=False, untrained=False):
+    def __init__(self, *, config: DistributedConfig = None, untrained=False, max_layers=2):
         """
         Parameters
         ----------
@@ -29,7 +33,8 @@ class LayerTypeProblem:
         self.data_height = 32
         self.data_width = 32
         self.untrained = untrained
-        self.distributed = distributed
+        self.config = config
+        self.evaluator = None
 
         def get_types_and_max_no():
             """ Get the layers types nubmer
@@ -45,7 +50,7 @@ class LayerTypeProblem:
             return max_subtypes, max_types
 
         max_subtypes, max_types = get_types_and_max_no()
-        low_bound = 1
+        low_bound = 0
         upper_bound_subtype = low_bound + max_subtypes
         upper_bound_type = low_bound + max_types
 
@@ -58,13 +63,6 @@ class LayerTypeProblem:
             self.bounds[0].append(low_bound)
             # Upper bound of layer's subtypes
             self.bounds[1].append(upper_bound_subtype)
-
-        if self.distributed:
-            from neural_nets import DistributedNeuralEvaluator
-            self.evaluator = DistributedNeuralEvaluator()
-        else:
-            from neural_nets import NeuralEvaluator
-            self.evaluator = NeuralEvaluator()
 
     def get_bounds(self):
         """Returns the upper and lower limit for each layer's two parameters:
@@ -101,6 +99,17 @@ class LayerTypeProblem:
             The network's accuracy, in the range [0.0, 100.0].
 
         """
+
+        # This needs to be here as pygmo pickles the object to send it to workers
+        # and Environment contains thread locks which cannot be pickled
+        if self.config is None:
+            from nord.neural_nets.evaluators.neural_evaluators import LocalEvaluator
+            warnings.warn('Empty config. Running locally')
+            self.evaluator = LocalEvaluator(torch.optim.Adam, {}, True)
+
+        if self.evaluator is None:
+            self.evaluator = Environment(self.config)
+
         descriptor = NeuralDescriptor()
         previous_in = self.data_channels
         type_keys = list(types_dict.keys())
@@ -110,22 +119,22 @@ class LayerTypeProblem:
 
             layer_type = type_keys[layer_type]
             layer = types_dict[layer_type]
+            subtype = subtype % len(layer)
             layer = layer[subtype]
 
-            p_names, p_vals = generate_layer_parameters(layer)
+            p_vals = generate_layer_parameters(layer)
 
-            if 'in_channels' in p_names:
-                index = p_names.index('in_channels')
-                p_vals[index] = previous_in
-                print('in_channels', p_vals[index])
-            if 'out_channels' in p_names:
-                index = p_names.index('out_channels')
-                previous_in = p_vals[index]
-                print('out_channels', p_vals[index])
+            if 'in_channels' in p_vals:
+                p_vals['in_channels'] = previous_in
+
+            if 'out_channels' in p_vals:
+                previous_in = p_vals['out_channels']
+
             descriptor.add_layer_sequential(layer, p_vals)
-            descriptor.add_layer_sequential(nn.ReLU6, [])
-        fitness = self.evaluator.descriptor_evaluate(descriptor,
-                                                     untrained=self.untrained,
-                                                     verbose=False) * 100
+            descriptor.add_layer_sequential(nn.ReLU6, {})
+        loss, metrics, time = self.evaluator.descriptor_evaluate(descriptor,
+                                                                 epochs=1,
+                                                                 untrained=self.untrained,
+                                                                 dataset='cifar10')
 
-        return [fitness]
+        return [metrics['accuracy']*100]

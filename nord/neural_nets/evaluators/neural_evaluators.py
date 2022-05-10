@@ -412,16 +412,27 @@ class DistributedEvaluator(AbstractNeuralEvaluator):
 
         return net
 
-    def process_returns(self, loss: float, accuracy: float):
+    def process_returns(self, loss: float, metrics: dict):
         """Process loss and accuracy, accounting for any distributed testing
         """
-        loss = dist.allreduce(loss)/self.configuration.world_size
-        accuracy = dist.allreduce(accuracy)/self.configuration.world_size
+        # Casting to tensor and sending to gpu in order to reduce(sum) through nccl
+
+        loss = torch.tensor(loss).cuda()
+        dist.all_reduce(loss)
+        loss = loss.cpu().numpy() / self.configuration.world_size
+
+        new_metrics = {}
+        for metric_key in metrics:
+            metric_v = metrics[metric_key]
+            new_v = torch.tensor(metric_v).cuda()
+            dist.all_reduce(new_v)
+            new_v = new_v.cpu().numpy() / self.configuration.world_size
+            new_metrics[metric_key] = new_v
 
         if self.configuration.world_rank == 0 and self.verbose:
 
-            print('Accuracy of the network on the test images: %.2f %%' % (
-                accuracy))
+            print('Metrics of the network on the test images: ',
+                  (new_metrics))
             print('Loss of the network on the test images: %.4f ' % (
                 loss))
-        return loss, accuracy
+        return loss, new_metrics

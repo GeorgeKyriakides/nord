@@ -8,9 +8,14 @@ Created on 2018-09-02
 # Simple example of finding the parameters for a simple ConvNet.
 
 
-from design.problem_definitions import ConvNetSizeProblem
-from utils import get_logger
+from nord.utils import get_logger
 import pygmo as pg
+
+from nord.design.pygmo_problem_definitions.conv_net_size_problem import \
+    ConvNetSizeProblem
+
+
+get_logger
 
 gens = 10
 pop_size = 10
@@ -20,8 +25,8 @@ logger = get_logger('Local')
 
 def main(untrained):
     pop = None
-    prob = ConvNetSizeProblem(2, untrained=untrained)
-    pg.set_global_rng_seed(94874)
+    prob = ConvNetSizeProblem(max_layers=2, untrained=untrained)
+    pg.set_global_rng_seed(45714)
     prob = pg.problem(prob)
     algo = pg.algorithm(pg.sga(1, m=0.2, mutation='uniform'))
     pop = pg.population(prob, pop_size)
@@ -32,3 +37,7 @@ def main(untrained):
         for i in range(len(x)):
             logger.info(str(g)+';'+str(x[i])+';'+str(f[i][0]))
         pop = algo.evolve(pop)
+
+
+if __name__ == '__main__':
+    main(True)

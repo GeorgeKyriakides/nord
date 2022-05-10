@@ -454,23 +454,19 @@ def generate_layer_parameters(layer, mandatory_only=True):
 
     Returns
     -------
-    params : list
-        A list with the parameters' names.
-
-    param_vals : list
-        A list with the generated values.
+    param_vals : dict
+        A dict with the parameters name-value pairs.
     """
-    from neural_nets import layers
+    from nord.neural_nets import layers
 
     lt = layers.find_layer_type(layer)
     params = extract_params(layer, mandatory_only)
-    param_types = []
-    param_vals = []
+    param_vals = {}
     for param in params:
-        type_ = layers.parameters[lt][param]
-        param_types.append(type_)
-        param_vals.append(get_random_value(type_))
-    return params, param_vals
+        type_ = layers.parameters_dict[lt][param]
+        value = get_random_value(type_)
+        param_vals[param] = value
+    return param_vals
 
 
 # =============================================================================
