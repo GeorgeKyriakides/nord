@@ -1,5 +1,3 @@
-# from nord.design.differenetiable.mpi_darts.distributed_darts import mymain
-# from nord.design.differenetiable.distributed_darts.distributed_darts import mymain
 from nord.design.differenetiable.darts.darts import main
 import argparse
 

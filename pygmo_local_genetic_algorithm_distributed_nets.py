@@ -5,8 +5,8 @@ Created on 2018-09-02
          ge.kyriakides@gmail.com
 """
 
-# Simple example of finding the parameters for a simple ConvNet.
-
+# Simple example of finding the parameters for a small ConvNet.
+# Local PyGMO implementation with distributed training.
 
 import numpy as np
 import pygmo as pg

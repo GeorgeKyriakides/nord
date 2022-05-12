@@ -58,7 +58,7 @@ class NASBench_101Evaluator():
         model_spec = self.__descriptor_to_spec(descriptor)
         return model_spec in self.checked_models
 
-    def descriptor_evaluate(self, descriptor, acc='validation_accuracy'):
+    def descriptor_evaluate(self, descriptor, acc='validation_accuracy', debug=False):
 
         model_spec = self.__descriptor_to_spec(descriptor)
         data = 0, 0
@@ -71,9 +71,9 @@ class NASBench_101Evaluator():
                 data = self.dataset.query(model_spec)
                 self.checked_models[hash_] = data
         except:
-            traceback.print_exc()
+            if debug:
+                traceback.print_exc()
             return 0, 0
-        print('*'*50)
         return data[acc], data['training_time']
 
     @staticmethod

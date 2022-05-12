@@ -5,7 +5,8 @@ Created on 2018-09-02
          ge.kyriakides@gmail.com
 """
 
-# Simple example of finding the parameters for a simple ConvNet.
+# Simple example of finding the parameters for a small ConvNet.
+# Custom MPI implementation.
 
 import warnings
 import numpy as np

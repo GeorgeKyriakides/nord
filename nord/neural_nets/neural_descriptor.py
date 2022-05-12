@@ -50,6 +50,8 @@ class NeuralDescriptor(object):
         self.incoming_connections[name] = []
         self.current_layer += 1
 
+        return name
+
     def add_layer_sequential(self, layer_class: type, parameters: dict,
                              name: str = None):
         """Adds a layer type with specific parameters to the network,

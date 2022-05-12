@@ -5,8 +5,8 @@ Created on 2018-09-02
          ge.kyriakides@gmail.com
 """
 
-# Simple example of finding the parameters for a simple ConvNet.
-
+# Simple example of finding the parameters for a small ConvNet.
+# Local PyGMO implementation.
 
 from nord.utils import get_logger
 import pygmo as pg
@@ -17,7 +17,7 @@ from nord.design.pygmo_problem_definitions.conv_net_size_problem import \
 
 get_logger
 
-gens = 10
+gens = 500
 pop_size = 10
 
 logger = get_logger('Local')
@@ -40,4 +40,4 @@ def main(untrained):
 
 
 if __name__ == '__main__':
-    main(True)
+    main(False)

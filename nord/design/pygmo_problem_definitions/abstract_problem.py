@@ -6,7 +6,6 @@ Created on 2018-08-02
 """
 import warnings
 import torch
-import torch.nn as nn
 from nord.neural_nets import NeuralDescriptor
 from nord.neural_nets.distributed.distributed_configurator import DistributedConfig
 from nord.neural_nets.distributed.environment import Environment
