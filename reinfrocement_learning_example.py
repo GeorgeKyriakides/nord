@@ -325,5 +325,5 @@ for i_episode in range(num_episodes):
         target_net.load_state_dict(policy_net.state_dict())
 
 print('Total search time:', time.time() - start_t)
-plt.plot(accs)
+plt.plot(accs, label='Reinforcement Learning 34.1s')
 plt.ylim((0.6, 0.95))
