@@ -126,7 +126,7 @@ new_list_1 = get_accuracies(
 plt.plot(new_list_1, label='1 gpu', linestyle='--')
 new_list_2 = get_accuracies(
     'train_acc', f'/home/george/Documents/nord_github/nord/logs/with_reductions/evals/eval-nccl_1node_2a100/log.txt')
-plt.plot(new_list_2, label='2  gpu', linestyle='-')
+plt.plot(new_list_2, label='2 gpu', linestyle='-')
 new_list_4 = get_accuracies(
     'train_acc', f'/home/george/Documents/nord_github/nord/logs/with_reductions/evals/eval-nccl_1node_4a100/log.txt')
 plt.plot(new_list_4, label='4 gpu', linestyle='-.')
@@ -141,7 +141,7 @@ new_list_1 = get_accuracies(
 plt.plot(new_list_1, label='1 gpu', linestyle='--')
 new_list_2 = get_accuracies(
     'valid_acc', f'/home/george/Documents/nord_github/nord/logs/with_reductions/evals/eval-nccl_1node_2a100/log.txt')
-plt.plot(new_list_2, label='2  gpu', linestyle='-')
+plt.plot(new_list_2, label='2 gpu', linestyle='-')
 new_list_4 = get_accuracies(
     'valid_acc', f'/home/george/Documents/nord_github/nord/logs/with_reductions/evals/eval-nccl_1node_4a100/log.txt')
 plt.plot(new_list_4, label='4 gpu', linestyle='-.')
