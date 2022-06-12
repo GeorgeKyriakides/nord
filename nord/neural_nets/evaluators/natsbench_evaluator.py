@@ -42,7 +42,8 @@ class Structure:
             assert isinstance(node_info, list) or isinstance(
                 node_info, tuple
             ), "invalid class of node_info : {:}".format(type(node_info))
-            assert len(node_info) >= 1, "invalid length : {:}".format(len(node_info))
+            assert len(node_info) >= 1, "invalid length : {:}".format(
+                len(node_info))
             for node_in in node_info:
                 assert isinstance(node_in, list) or isinstance(
                     node_in, tuple
@@ -225,6 +226,9 @@ class NATSBench_Evaluator:
             filepath + "/" + NATSBENCH_NAME, "tss", fast_mode=True, verbose=False
         )
 
+    def get_available_ops(self) -> list:
+        return OPS
+
     def descriptor_evaluate(
         self, descriptor, metrics=["validation_accuracy", "time_cost"]
     ):
@@ -232,7 +236,8 @@ class NATSBench_Evaluator:
         arch = NATSBench_Evaluator._descriptor_to_nasnet(descriptor)
         index = self.api.query_index_by_arch(arch)
 
-        api_metrics = self.api.get_more_info(arch, dataset="cifar10-valid", hp="200")
+        api_metrics = self.api.get_more_info(
+            arch, dataset="cifar10-valid", hp="200")
         latency = self.api.get_latency(index, dataset="cifar10-valid")
         arch_metrics = {
             "train_loss": api_metrics["train-loss"],
@@ -308,9 +313,11 @@ class NATSBench_Evaluator:
                 node_incoming = groups[node_incoming[0]]
 
                 if node_incoming in edges:
-                    edges[node_incoming][groups[node]] = descriptor.layers[incoming]
+                    edges[node_incoming][groups[node]
+                                         ] = descriptor.layers[incoming]
                 else:
-                    edges[node_incoming] = {groups[node]: descriptor.layers[incoming]}
+                    edges[node_incoming] = {
+                        groups[node]: descriptor.layers[incoming]}
 
         return edges
 
@@ -349,43 +356,3 @@ def random_topology_func(op_names, max_nodes=4):
         return Structure(genotypes)
 
     return random_architecture
-
-
-# descriptor = NeuralDescriptor()
-# descriptor.add_layer("IN", None, "IN")
-# descriptor.add_layer_sequential("avg_pool_3x3", None, "1")
-# descriptor.add_layer_sequential("nor_conv_1x1", None, "2")
-# descriptor.add_layer_sequential("skip_connect", None, "3")
-# descriptor.add_layer_sequential("OUT", None, "OUT")
-
-# descriptor.add_layer("avg_pool_3x3", None, "4")
-# descriptor.connect_layers("1", "4")
-# descriptor.connect_layers("4", "OUT")
-
-# descriptor.add_layer("nor_conv_3x3", None, "5")
-# descriptor.connect_layers("IN", "5")
-# descriptor.connect_layers("5", "3")
-
-
-# descriptor.add_layer("nor_conv_3x3", None, "6")
-# descriptor.connect_layers("IN", "6")
-# descriptor.connect_layers("6", "OUT")
-
-
-# api = create(
-#     NATSBENCH_TFRECORD + "/" + NATSBENCH_NAME, "tss", fast_mode=True, verbose=True
-# )
-
-# # arch = random_topology_func(OPS)()
-
-# arch = NATSBench_Evaluator._descriptor_to_nasnet(descriptor)
-# # print('*'*30)
-# print(api.query_by_arch(arch, "200"))
-# # print(arch)
-# index = api.query_index_by_arch(arch)
-# (
-#     validation_accuracy,
-#     latency,
-#     time_cost,
-#     current_total_time_cost,
-# ) = api.simulate_train_eval(index, dataset="cifar10", hp="200")

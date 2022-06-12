@@ -8,6 +8,7 @@
 
 """
 
+import matplotlib as mpl
 import time
 from collections import namedtuple
 from copy import deepcopy
@@ -24,17 +25,6 @@ from nord.utils import assure_reproducibility
 
 
 evaluator = NASBench_101Evaluator()
-
-
-font = {'family': 'normal',
-        'weight': 'normal',
-        'size': 16}
-matplotlib.rc('font', **font)
-# Plotting parameters
-sns.set_style("white")
-sns.set_style("ticks")
-sns.set_palette('colorblind')
-plt.style.use('tableau-colorblind10')
 
 
 ops = evaluator.get_available_ops()
@@ -62,15 +52,16 @@ assure_reproducibility()
 
 
 def add_random_connection(descriptor: NeuralDescriptor):
-    # Dont get output as source node [:-1]
-    from_ = np.random.choice(
-        list(descriptor.connections.keys())[:-1])
+    # Get a source, but don't get output as source node [:-1]
+    from_ = np.random.choice(list(descriptor.connections.keys())[:-1])
+    # NORD names layers with a number prefix. Get the source node number
+    # and find possible output nodes that have a greater number as prefix
     from_number = from_.split('_')[0]
-    avail_to_layers = [
-        x for x in descriptor.layers.keys() if int(from_number) < int(x.split('_')[0])]
+    avail_to_layers = [x for x in descriptor.layers.keys() if int(
+        from_number) < int(x.split('_')[0])]
+    # If there are available output layers, choose one at random and add the connection
     if len(avail_to_layers) > 1:
         to_ = np.random.choice(avail_to_layers)
-        # # If a new connection is generated add it and continue
         descriptor.connect_layers(from_, to_)
 
     return descriptor
@@ -79,24 +70,33 @@ def add_random_connection(descriptor: NeuralDescriptor):
 def mutate(descriptor: NeuralDescriptor):
     r = np.random.uniform()
     try:
-
+        # If we have the maximum number of hidden layers (+2 to account for input-output layers) we can only add connections
         if r < add_connection_prob or len(descriptor.layers) == max_layers+2:
-
             descriptor = add_random_connection(descriptor)
-
+        # If we have less layers and the random number generator dictates to add
+        # a layer, proceed
         elif r < add_node_prob+add_connection_prob:
-            # Dont get output as source node
+            # Get source node, but again don't get the output layer as source node
             from_ = np.random.choice(list(descriptor.connections.keys())[:-1])
+            # Get all of its connections and choose one at random to replace
             to_ = np.random.choice(list(descriptor.connections[from_]))
-
+            # Get a random layer
             layer_index = np.random.choice(available_layers)
+            # Name it with a prefix that is larger than the source node
+            # and smaller than the destination node. Getting the average
+            # of the source and destination prefixes is sufficient.
             layer_name = (int(from_.split('_')) + (to_.split('_')))/2
             layer_name = str(layer_name)+'_Layer'
             layer_name = descriptor.add_layer(ops[layer_index], {}, layer_name)
 
+            # Disconnect the original source and destination nodes
             descriptor.disconnect_layers(from_, to_)
+            # Connect them to the new layer
             descriptor.connect_layers(from_, layer_name)
             descriptor.connect_layers(layer_name, to_)
+        # Ensure that the descriptor's last layer name points
+        # to the actual output layer. Adding a layer
+        # changes the last_layer name, so we have to reset it
         descriptor.last_layer = OUTPUT_LAYER_NAME
     except Exception:
         pass
@@ -109,9 +109,8 @@ def evaluate(descriptor):
     fitness = 0
     total_time = 0
     try:
-        for _ in range(30):
-            fitness, total_time = evaluator.descriptor_evaluate(
-                descriptor)
+        fitness, total_time = evaluator.descriptor_evaluate(
+            descriptor)
     except Exception as e:
         pass
 
@@ -161,9 +160,21 @@ while generation < evolutions:
 
     population.pop(0)
 
-print('Total time: ', time.time() - start_t)
-plt.plot(fitnesses, label='Evolutionary 14.5s')
-plt.plot(accs, label='Reinforcement Learning 34.1s')
+
+sns.set_style("white")
+sns.set_style("ticks")
+sns.set_palette('colorblind')
+plt.rcParams["figure.dpi"] = 300
+
+
+print('Total search time: ', time.time() - start_t)
+print('Total evaluation time: ', evaluator.dataset.training_time_spent)
+plt.plot([x if x > 0 else None for x in accs],
+         label='Reinforcement Learning 34.1s', linestyle='--')
+plt.plot([x if x > 0 else None for x in fitnesses], label='Evolutionary 0.8s')
 
 plt.ylim((0.6, 0.96))
-plt.legend()
+plt.xlabel('Network Evaluations')
+plt.ylabel('Validation Accuracy')
+plt.title('')
+plt.legend(loc='lower right')

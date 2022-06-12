@@ -2,9 +2,16 @@
 Example usage of NeuralDescriptor and NeuralNet classes
 
 """
+import seaborn as sns
 import torch.nn as nn
+from matplotlib import pyplot as plt
 
 from nord.neural_nets import NeuralDescriptor, NeuralNet
+
+sns.set_style("white")
+sns.set_style("ticks")
+sns.set_palette('colorblind')
+plt.rcParams["figure.dpi"] = 300
 
 # Define layer presets
 conv = nn.Conv2d
@@ -13,7 +20,9 @@ conv_params = {'in_channels': 3,
 
 conv_2_params = {'in_channels': 5,
                  'out_channels': 10, 'kernel_size': 5}
-
+                 
+conv_3_params = {'in_channels': 5,
+                 'out_channels': 10, 'kernel_size': 3}
 pool = nn.MaxPool2d
 pool_params = {'kernel_size': 2, 'stride': 2}
 
@@ -46,8 +55,7 @@ d = NeuralDescriptor()
 # Add layers and give them names
 d.add_layer(conv, conv_params, 'conv')
 d.add_layer(conv, conv_2_params, 'conv2')
-d.add_layer(conv, {'in_channels': 5,
-                   'out_channels': 10, 'kernel_size': 3}, 'conv3')
+d.add_layer(conv, conv_3_params, 'conv3')
 d.add_layer(pool, pool_params, 'pool1')
 d.add_layer(pool, pool2_params, 'pool2')
 

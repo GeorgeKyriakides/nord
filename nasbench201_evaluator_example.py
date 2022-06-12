@@ -6,7 +6,12 @@ descriptor.add_layer("IN", None, "IN")
 descriptor.add_layer_sequential("nor_conv_3x3", None, "1")
 descriptor.add_layer_sequential("nor_conv_1x1", None, "2")
 descriptor.add_layer_sequential("avg_pool_3x3", None, "3")
-# descriptor.add_layer_sequential("avg_pool_3x3", None, "4") # does not work with 5 nodes
+
+# Note that does NOT work with 5 nodes!
+# If we remove the following comment the evaluator
+# will reject the descriptor
+
+# descriptor.add_layer_sequential("avg_pool_3x3", None, "4")
 descriptor.add_layer_sequential("OUT", None, "OUT")
 
 ne._descriptor_to_nasnet(descriptor)
@@ -29,7 +34,7 @@ descriptor.connect_layers("6", "OUT")
 
 ne._descriptor_to_nasnet(descriptor)
 
-ne.descriptor_evaluate(descriptor)
+ne.descriptor_evaluate(descriptor, metrics=['validation_accuracy'])
 
 ne.api.query_index_by_arch(ne._descriptor_to_nasnet(descriptor))
 

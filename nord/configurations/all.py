@@ -35,10 +35,10 @@ class Configs:
         self.CHANNELS = {'cifar10': 3,
                          'activity_recognition': 3,
                          'fashion-mnist': 1,
-                         'graph-nasbench3': 5,
-                         'graph-nasbench1': 5,
-                         'graph-f-mnist3': 5,
-                         'graph-f-mnist1': 5}
+                         'graph-nasbench3': 1,
+                         'graph-nasbench1': 1,
+                         'graph-f-mnist3': 1,
+                         'graph-f-mnist1': 1}
 
         self.CRITERION = {'cifar10': nn.CrossEntropyLoss,
                           'activity_recognition': nord_cross_entropy_loss,

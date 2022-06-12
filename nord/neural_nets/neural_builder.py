@@ -305,7 +305,6 @@ class _AbstractNet(nn.Module):
                 nodelist=list(nodes))
 
         ax.set_xlim(xmin=min_x-half_spacing, xmax=max_x+half_spacing)
-        plt.show()
 
 
 class NeuralNet(_AbstractNet):
@@ -346,7 +345,6 @@ class NeuralNet(_AbstractNet):
 
         """
         super().__init__(net_descriptor)
-
 
         self.input_shapes = dict()
         self.input_channels = dict()

@@ -44,6 +44,7 @@ def get_mnist(percentage: float = 1):
 # Instantiate the Configs singleton and add the dataset
 conf = Configs()
 conf.print_datasets()
+# data_organization is optional, defaults to 'matrix' i.e. image
 conf.add_classification_dataset(name='MNIST', num_classes=10, input_shape=(
     28, 28), channels=1, data_load=get_mnist)
 conf.print_datasets()

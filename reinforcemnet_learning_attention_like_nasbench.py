@@ -28,20 +28,15 @@ import seaborn as sns
 from nord.utils import assure_reproducibility
 
 
-# Plotting parameters
-sns.set_style("white")
-sns.set_style("ticks")
-sns.set_palette('colorblind')
-font = {'family': 'normal',
-        'weight': 'normal',
-        'size': 16}
-
-matplotlib.rc('font', **font)
-
-
 # Instantiate the evaluator
 evaluator = NASBench_101Evaluator()
 
+INPUT_LAYER = 'input'
+OUTPUT_LAYER = 'output'
+
+
+ops = evaluator.get_available_ops()
+ops_number = len(ops)
 NO_CONNECTION = 7
 
 assure_reproducibility(1337)
@@ -125,7 +120,7 @@ TARGET_UPDATE = 10
 
 
 # +1 as we can stop before maximum number of layers
-n_actions = len(evaluator.get_available_ops())+1
+n_actions = ops_number+1
 
 policy_net = DQN(n_actions).to(device)
 target_net = DQN(n_actions).to(device)
@@ -267,31 +262,31 @@ class NASEnv:
         self.layer_codes = {}
 
         for i in range(len(self.avail_layers)):
-            code = np.zeros(4)
+            code = np.zeros(ops_number+1)
             code[i] = 1.0
             self.layer_codes[self.avail_layers[i]] = code
 
-        self.layer_codes['input'] = np.array([0, 0, 0, 1])
+        self.layer_codes[INPUT_LAYER] = np.array([0, 0, 0, 1])
         self.descriptor = NeuralDescriptor()
-        self.descriptor.add_layer_sequential('input', {})
+        self.descriptor.add_layer_sequential(INPUT_LAYER, {})
 
     def reset(self):
 
         self.descriptor = NeuralDescriptor()
-        self.descriptor.add_layer_sequential('input', {})
+        self.descriptor.add_layer_sequential(INPUT_LAYER, {})
 
     def get_state(self):
 
         tmp_desc = deepcopy(self.descriptor)
-        tmp_desc.add_layer_sequential('output', {}, 'tmp_out')
+        tmp_desc.add_layer_sequential(OUTPUT_LAYER, {}, 'tmp_out')
         matrix, ops = evaluator.descriptor_to_matrix(tmp_desc)
 
-        layers = np.zeros(6*4)
+        layers = np.zeros(6*(ops_number+1))
         # Don't need output layer
         for i in range(len(ops)-1):
             op = ops[i]
             code = np.array(self.layer_codes[op])
-            layers[i*4:(i+1)*4] = code
+            layers[i*(ops_number+1):(i+1)*(ops_number+1)] = code
 
         connections = np.zeros((7, 7))
 
@@ -319,12 +314,12 @@ class NASEnv:
         done = False
         # If terminal state or the agent chooses to stop
         if current_layers_no == 6:
-            self.descriptor.add_layer_sequential('output', {})
+            self.descriptor.add_layer_sequential(OUTPUT_LAYER, {})
             reward, time = evaluator.descriptor_evaluate(self.descriptor)
             done = True
         else:
 
-            layer_params = ('output', {})
+            layer_params = (OUTPUT_LAYER, {})
 
             if layer < len(self.avail_layers):
                 layer_params = (self.avail_layers[layer], {})
@@ -401,6 +396,15 @@ for i_episode in range(num_episodes):
     if i_episode % TARGET_UPDATE == 0:
         target_net.load_state_dict(policy_net.state_dict())
 
+
+sns.set_style("white")
+sns.set_style("ticks")
+sns.set_palette('colorblind')
+plt.rcParams["figure.dpi"] = 300
+
+print('Total train time:', evaluator.dataset.training_time_spent)
 print('Total search time:', time.time() - start_t)
-plt.plot(accs)
-plt.ylim((0.6, 0.95))
+plt.plot(accs, label='Network Accuracy')
+plt.xlabel('Episode')
+plt.ylabel('Validation Accuracy')
+plt.legend(loc='lower right')

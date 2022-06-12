@@ -138,7 +138,7 @@ def rank_inds_of_lists(pairwise, indices=None, all_to_all=True):
     return torch.sum(pmax, axis=1).cpu().detach().numpy()
 
 
-def plot_descriptor(descriptor):
+def plot_descriptor(descriptor, title):
     import matplotlib.pyplot as plt
     import networkx as nx
     import numpy as np

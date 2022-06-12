@@ -333,7 +333,7 @@ class LocalEvaluator(AbstractNeuralEvaluator):
 
         if self.conf.INPUT_DATA_ORGANIZATION[self.dataset] == 'graph':
             return GraphRankNet(descriptor, self.conf.NUM_CLASSES[self.dataset],
-                                self.conf.INPUT_SHAPE[self.dataset], self.conf.CHANNELS[self.dataset],
+                                self.conf.INPUT_SHAPE[self.dataset],
                                 untrained=untrained)
 
         return NeuralNet(descriptor, self.conf.NUM_CLASSES[self.dataset],
