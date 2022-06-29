@@ -20,7 +20,7 @@ conv_params = {'in_channels': 3,
 
 conv_2_params = {'in_channels': 5,
                  'out_channels': 10, 'kernel_size': 5}
-                 
+
 conv_3_params = {'in_channels': 5,
                  'out_channels': 10, 'kernel_size': 3}
 pool = nn.MaxPool2d

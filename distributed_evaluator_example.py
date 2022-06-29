@@ -55,7 +55,8 @@ d.add_layer_sequential(pool, pool_params)
 
 # Create the config object.
 
-config = DistributedConfig('127.0.0.1', '1234', 1, 0)
+config = DistributedConfig(master_address='127.0.0.1', master_port='1234',
+                           world_size=1, world_rank=0)
 
 # Evaluate the network for 2 epochs
 with Environment(config) as e:

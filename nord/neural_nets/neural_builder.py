@@ -268,15 +268,17 @@ class _AbstractNet(nn.Module):
                     positions[last] = (positions[last][0]+half_spacing,
                                        positions[last][1])
                     recursed_nodes.append(last)
-            return positions, min_x, max_x
+            return positions, min_x, max_x, np.abs(positions[f_l][1]-positions[l_l][1])
 
         G = self.to_networkx()
-        plt.figure()
-        plt.title(title)
-        ax = plt.gca()
+
         in_path = self.get_direct_paths()
         recs = self.get_recursions()
-        pos, min_x, max_x = my_layout(G, in_path, recs)
+        pos, min_x, max_x, max_heigth = my_layout(G, in_path, recs)
+
+        plt.figure(figsize=(max_heigth//2, max_heigth//2))
+        plt.title(title)
+        ax = plt.gca()
 
         nodes = set()
         for p in in_path:
